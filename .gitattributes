@@ -1,0 +1,14 @@
+# Normaliza finales de línea para que Windows/Mac/Linux no generen diffs falsos
+* text=auto
+
+*.sh    text eol=lf
+
+# Scripts de Windows con CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binarios: no tocar
+*.png   binary
+*.jpg   binary
+*.docx  binary
+*.pdf   binary

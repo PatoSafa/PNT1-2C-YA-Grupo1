@@ -1,0 +1,20 @@
+
+# Gradle / Java
+.gradle/
+build/
+out/
+*.class
+*.log
+
+# IDEs
+.idea/
+*.iml
+
+# Secretos y configuración local
+.env
+application-local.yaml
+application-local.properties
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
