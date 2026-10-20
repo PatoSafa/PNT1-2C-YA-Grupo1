@@ -1,19 +1,21 @@
 
-# Gradle / Java
-.gradle/
-build/
-out/
-*.class
-*.log
+# .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+TestResults/
 
-# IDEs
-.idea/
-*.iml
+# Node (si se usa para herramientas)
+node_modules/
+
+# Logs
+*.log
 
 # Secretos y configuración local
 .env
-application-local.yaml
-application-local.properties
+appsettings.Local.json
 
 # Sistema operativo
 .DS_Store
