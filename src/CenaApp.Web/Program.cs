@@ -22,6 +22,8 @@ builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<ICuentaService, CuentaService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
 builder.Services.AddScoped<IDespensaService, DespensaService>();
+// Sin estado ni base de datos: una sola instancia para toda la app.
+builder.Services.AddSingleton<IComercioService, ComercioService>();
 
 // Login por cookie (sin ASP.NET Core Identity completo: son pocas clases propias, fáciles de explicar). Si alguien sin sesión entra a una
 // página con [Authorize], lo manda a /Cuenta/Ingresar; si no tiene el rol, a /Cuenta/AccesoDenegado.
