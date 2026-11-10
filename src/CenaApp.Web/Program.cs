@@ -1,10 +1,12 @@
 // Configura la aplicación: servicios (inyección de dependencias), base de datos y rutas MVC.
 using System.Globalization;
+using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using CenaApp.Web.Data;
 using CenaApp.Web.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.WebEncoders;
@@ -48,6 +50,8 @@ builder.Services.AddScoped<ICuentaService, CuentaService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
 builder.Services.AddScoped<IDespensaService, DespensaService>();
 builder.Services.AddScoped<IIngredienteService, IngredienteService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<ICatalogoService, CatalogoService>();
 // Comercios: consulta OpenStreetMap (Overpass) por HTTP (D-20). AddHttpClient le da al servicio un HttpClient
 // ya configurado; la caché en memoria guarda las respuestas para no repetir consultas.
 builder.Services.AddMemoryCache();
@@ -68,6 +72,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         // La sesión vence tras 60 minutos sin uso; cada visita la renueva (RNF15).
         opciones.ExpireTimeSpan = TimeSpan.FromMinutes(60);
         opciones.SlidingExpiration = true;
+
+        // En cada pedido se revisa que el usuario siga existiendo, activo y con el mismo rol (D-22). Así, si el
+        // SuperAdmin lo desactiva o le cambia el rol, la sesión abierta se cierra y no sigue viendo lo de antes.
+        opciones.Events.OnValidatePrincipal = async contexto =>
+        {
+            var db = contexto.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+            var id = int.Parse(contexto.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = await db.Usuarios.Where(u => u.Id == id).Select(u => new { u.Activo, u.Rol }).FirstOrDefaultAsync();
+            if (usuario is null || !usuario.Activo || !contexto.Principal.IsInRole(usuario.Rol.ToString()))
+            {
+                contexto.RejectPrincipal();
+                await contexto.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        };
     });
 
 // La cadena de conexión sale de appsettings.Development.json en local

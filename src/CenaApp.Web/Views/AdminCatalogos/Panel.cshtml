@@ -1,0 +1,45 @@
+@* Panel de administración (D-22): números de la app y lo más usado por los usuarios. *@
+@model CenaApp.Web.ViewModels.PanelViewModel
+@{
+    ViewData["Title"] = "Panel";
+    ViewData["OcultarBarra"] = true;
+}
+
+<partial name="_AdminEncabezado" />
+
+<div class="cuerpo">
+    <section class="tarjeta superpuesta">
+        <div class="numeros-panel">
+            <div><strong>@Model.Usuarios</strong><span>usuarios</span><small>@Model.UsuariosActivos activos · @Model.Admins admins</small></div>
+            <div><strong>@Model.Recetas</strong><span>recetas</span><small><a asp-controller="AdminRecetas" asp-action="Index">Administrar</a></small></div>
+            <div><strong>@Model.Ingredientes</strong><span>ingredientes</span><small><a asp-controller="AdminIngredientes" asp-action="Index">Administrar</a></small></div>
+        </div>
+    </section>
+
+    @if (Model.IngredientesSinImagen > 0 || Model.IngredientesSinUso > 0)
+    {
+        <section class="tarjeta">
+            <h2 class="fs-6"><i class="bi bi-clipboard-check text-primary"></i> Para revisar</h2>
+            <ul class="small mb-0">
+                @if (Model.IngredientesSinImagen > 0)
+                {
+                    <li>@Model.IngredientesSinImagen @(Model.IngredientesSinImagen == 1 ? "ingrediente no tiene" : "ingredientes no tienen") imagen.</li>
+                }
+                @if (Model.IngredientesSinUso > 0)
+                {
+                    <li>@Model.IngredientesSinUso @(Model.IngredientesSinUso == 1 ? "ingrediente no se usa" : "ingredientes no se usan") en ninguna receta.</li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section class="tarjeta">
+        <h2 class="fs-6"><i class="bi bi-heart-fill text-danger"></i> Recetas más guardadas en favoritos</h2>
+        <partial name="_Ranking" model="Model.MasFavoritas" />
+    </section>
+
+    <section class="tarjeta">
+        <h2 class="fs-6"><i class="bi bi-basket text-success"></i> Lo que más hay en las despensas</h2>
+        <partial name="_Ranking" model="Model.MasEnDespensas" />
+    </section>
+</div>

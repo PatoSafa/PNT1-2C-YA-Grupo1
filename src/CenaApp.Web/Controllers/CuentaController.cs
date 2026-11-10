@@ -69,6 +69,13 @@ public class CuentaController : Controller
             return View(modelo);
         }
 
+        // Se avisa solo después de verificar la contraseña: así no se revela el estado de cuentas ajenas.
+        if (!usuario.Activo)
+        {
+            ModelState.AddModelError("", "Tu cuenta está desactivada. Consultá con el administrador.");
+            return View(modelo);
+        }
+
         await IniciarSesionAsync(usuario);
 
         // Solo se vuelve a direcciones de esta misma app (evita redirigir a otro sitio).

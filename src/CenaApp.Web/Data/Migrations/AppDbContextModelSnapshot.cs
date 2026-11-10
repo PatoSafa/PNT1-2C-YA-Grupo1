@@ -277,6 +277,9 @@ namespace CenaApp.Web.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
                     b.Property<byte[]>("Avatar")
                         .HasColumnType("bytea");
 

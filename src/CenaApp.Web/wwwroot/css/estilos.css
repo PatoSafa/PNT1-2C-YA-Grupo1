@@ -929,10 +929,14 @@ h1, h2, h3, h4 {
 .pestanas-admin {
     display: flex;
     gap: .25rem;
+    overflow-x: auto; /* en pantallas muy angostas, las pestañas se deslizan */
+    white-space: nowrap;
+    scrollbar-width: none;
 }
 
 .pestanas-admin a {
-    padding: .4rem 1rem;
+    padding: .35rem .6rem;
+    font-size: .875rem;
     border-radius: var(--radio-chico);
     color: rgba(255, 255, 255, .8);
     text-decoration: none;
@@ -941,6 +945,24 @@ h1, h2, h3, h4 {
 .pestanas-admin a.activo {
     background: rgba(255, 255, 255, .2);
     color: #fff;
+}
+
+/* Usuarios (D-22): etiqueta de rol y usuarios desactivados */
+.etiqueta-rol {
+    padding: .1rem .5rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 500;
+    background: var(--color-superficie);
+    color: var(--color-texto-secundario);
+}
+
+.rol-admin { background: var(--color-primario-suave); color: var(--color-primario-texto); }
+.rol-superadmin { background: #EDE9FE; color: #5B21B6; } /* violet-100 / violet-800 */
+.rol-inactivo { background: var(--color-peligro-suave); color: var(--color-peligro-texto); }
+
+.fila-admin.inactivo {
+    opacity: .7;
 }
 
 .fila-admin {
@@ -959,4 +981,52 @@ h1, h2, h3, h4 {
     gap: .35rem;
     align-items: center;
     margin-bottom: .35rem;
+}
+
+/* Panel de administración (D-22) */
+.numeros-panel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .5rem;
+    text-align: center;
+}
+
+.numeros-panel strong {
+    display: block;
+    font-size: 1.75rem;
+    color: var(--color-primario);
+}
+
+.numeros-panel span,
+.numeros-panel small {
+    display: block;
+    font-size: .8125rem;
+}
+
+.numeros-panel small {
+    color: var(--color-texto-apagado);
+}
+
+.ranking li {
+    margin-bottom: .5rem;
+}
+
+/* Catálogos: una fila editable por ítem */
+.fila-catalogo {
+    display: flex;
+    gap: .25rem;
+    align-items: flex-start;
+    padding: .5rem 0;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+/* El nombre comparte el renglón con el ✓ (y con el tipo, en gustos); la descripción va en su propio renglón. */
+.fila-catalogo .form-control:not(.w-100) {
+    width: auto;
+    flex: 1 1 8rem;
+}
+
+.fila-catalogo .btn,
+.fila-catalogo .form-select {
+    min-height: 0;
 }

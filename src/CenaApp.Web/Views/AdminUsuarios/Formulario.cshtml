@@ -1,0 +1,76 @@
+@* Alta y edición de un usuario (la misma vista para las dos), D-22. *@
+@model CenaApp.Web.ViewModels.UsuarioFormularioViewModel
+@{
+    var esAlta = Model.Id is null;
+    ViewData["Title"] = esAlta ? "Nuevo usuario" : $"Editar {Model.Email}";
+    ViewData["OcultarBarra"] = true;
+}
+
+<partial name="_AdminEncabezado" />
+
+<form asp-action="@(esAlta ? "Crear" : "Editar")" asp-route-id="@Model.Id" method="post" class="cuerpo" novalidate
+      data-confirmar="@(esAlta ? "¿Crear el usuario?" : "¿Guardar los cambios del usuario?")">
+    <input type="hidden" asp-for="EsElActual" />
+
+    <section class="tarjeta superpuesta">
+        <h2 class="fs-5 mb-3">@(esAlta ? "Nuevo usuario" : "Editar usuario")</h2>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" class="form-control" autocomplete="off" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Nombre" class="form-label"></label>
+            <input asp-for="Nombre" class="form-control" placeholder="Opcional: si queda vacío, lo completa en el onboarding" />
+            <span asp-validation-for="Nombre" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Clave" class="form-label"></label>
+            <input asp-for="Clave" class="form-control" autocomplete="new-password"
+                   placeholder="@(esAlta ? "Al menos 8 caracteres" : "Dejala vacía para no cambiarla")" />
+            <span asp-validation-for="Clave" class="text-danger small"></span>
+        </div>
+    </section>
+
+    <section class="tarjeta">
+        <h2 class="fs-6"><i class="bi bi-shield-lock"></i> Rol y acceso</h2>
+        @if (Model.EsElActual)
+        {
+            <p class="small text-secondary">Es tu propia cuenta: no podés cambiarte el rol ni desactivarte.</p>
+        }
+        @foreach (var (rol, puede) in PermisosPorRol.Todos)
+        {
+            <input type="radio" class="btn-check" name="Rol" value="@rol" id="rol-@rol" checked="@(Model.Rol == rol)" disabled="@Model.EsElActual" />
+            <label class="opcion" for="rol-@rol">
+                <span class="fw-medium">@rol</span>
+                <small>@puede</small>
+            </label>
+        }
+        <span asp-validation-for="Rol" class="text-danger small d-block mb-2"></span>
+        @if (Model.EsElActual)
+        {
+            @* Los campos deshabilitados no se envían: se mandan ocultos para que la validación los vea iguales. *@
+            <input type="hidden" name="Rol" value="@Model.Rol" />
+            <input type="hidden" name="Activo" value="true" />
+        }
+
+        <div class="form-check form-switch">
+            <input asp-for="Activo" class="form-check-input" role="switch" disabled="@Model.EsElActual" />
+            <label asp-for="Activo" class="form-check-label"></label>
+            <div class="form-text">Un usuario desactivado no puede iniciar sesión, y si tenía la sesión abierta se le cierra.</div>
+        </div>
+    </section>
+
+    <div class="d-flex gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-outline-primary" data-confirmar="¿Descartar los cambios?">Cancelar</a>
+        <button type="submit" class="btn btn-primary flex-grow-1">@(esAlta ? "Crear" : "Guardar cambios")</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

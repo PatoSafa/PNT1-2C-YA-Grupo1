@@ -17,6 +17,9 @@ public class Usuario
 
     public Rol Rol { get; set; } = Rol.Usuario;
 
+    // false = cuenta desactivada por el SuperAdmin: no puede iniciar sesión (D-22).
+    public bool Activo { get; set; } = true;
+
     [Required, MaxLength(50)]
     public string Nombre { get; set; } = "";
 

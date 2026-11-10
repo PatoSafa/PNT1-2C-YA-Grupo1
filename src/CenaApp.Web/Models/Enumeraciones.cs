@@ -3,10 +3,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CenaApp.Web.Models;
 
+// D-22: Usuario usa la app; Admin además administra recetas, ingredientes y catálogos;
+// SuperAdmin además administra los usuarios.
 public enum Rol
 {
     Usuario,
-    Admin
+    Admin,
+    SuperAdmin
 }
 
 public enum Nivel

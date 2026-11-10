@@ -9,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CenaApp.Web.Controllers;
 
-[Authorize(Roles = "Admin")]
+// Admin y SuperAdmin (D-22).
+[Authorize(Roles = "Admin,SuperAdmin")]
 [Route("Admin/Recetas/[action]/{id?}")]
 public class AdminRecetasController : Controller
 {

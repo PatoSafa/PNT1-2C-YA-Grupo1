@@ -14,7 +14,9 @@
 
 <partial name="_AdminEncabezado" />
 
-<form asp-action="@(esAlta ? "Crear" : "Editar")" asp-route-id="@Model.Id" method="post" class="cuerpo" novalidate>
+@* data-confirmar: confirmación antes de guardar (D-24). *@
+<form asp-action="@(esAlta ? "Crear" : "Editar")" asp-route-id="@Model.Id" method="post" class="cuerpo" novalidate
+      data-confirmar="@(esAlta ? "¿Crear la receta?" : "¿Guardar los cambios de la receta?")">
     <section class="tarjeta superpuesta">
         <h2 class="fs-5 mb-3">@(esAlta ? "Nueva receta" : "Editar receta")</h2>
         <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
@@ -130,7 +132,7 @@
     </section>
 
     <div class="d-flex gap-2 mb-4">
-        <a asp-action="Index" class="btn btn-outline-primary">Cancelar</a>
+        <a asp-action="Index" class="btn btn-outline-primary" data-confirmar="¿Descartar los cambios de la receta?">Cancelar</a>
         <button type="submit" class="btn btn-primary flex-grow-1">@(esAlta ? "Crear receta" : "Guardar cambios")</button>
     </div>
 </form>

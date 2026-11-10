@@ -24,9 +24,10 @@ document.addEventListener("click", async (evento) => {
         boton.classList.toggle("activo", datos.esFavorita);
         boton.setAttribute("aria-pressed", datos.esFavorita);
         boton.querySelector("i").className = datos.esFavorita ? "bi bi-heart-fill" : "bi bi-heart";
+        avisar(datos.esFavorita ? "Agregada a tus favoritos." : "Quitada de tus favoritos.");
     } catch (error) {
         console.error(error);
-        alert("No se pudo actualizar el favorito. Probá de nuevo.");
+        avisar("No se pudo actualizar el favorito. Probá de nuevo.", false);
     } finally {
         boton.disabled = false;
     }

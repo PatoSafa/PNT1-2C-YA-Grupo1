@@ -1,0 +1,87 @@
+@* Catálogos (D-22): categorías, gustos, restricciones y alérgenos. Cada fila se edita en el lugar; abajo de cada
+   catálogo se agrega uno nuevo. Al lado de cada ítem dice dónde se usa, para saber qué afecta borrarlo. *@
+@model CenaApp.Web.ViewModels.CatalogosViewModel
+@{
+    ViewData["Title"] = "Catálogos";
+    ViewData["OcultarBarra"] = true;
+
+    var secciones = new (Catalogo Catalogo, string Titulo, string Icono, List<ItemCatalogoViewModel> Items, string AlBorrar)[]
+    {
+        (Catalogo.Categorias, "Categorías", "bi-tags", Model.Categorias,
+            "Solo se puede borrar si ninguna receta la usa."),
+        (Catalogo.Gustos, "Gustos", "bi-heart", Model.Gustos,
+            "Se quita de las recetas y de los perfiles que lo tengan."),
+        (Catalogo.Restricciones, "Restricciones alimentarias", "bi-slash-circle", Model.Restricciones,
+            "Se quita de los perfiles y de los ingredientes marcados como no aptos."),
+        (Catalogo.Alergenos, "Alérgenos", "bi-exclamation-triangle", Model.Alergenos,
+            "Se quita de los ingredientes y de los perfiles: las recetas dejan de avisar ese alérgeno."),
+    };
+}
+
+<partial name="_AdminEncabezado" />
+
+<div class="cuerpo">
+    <p class="small text-secondary mt-3">Las restricciones nuevas no filtran nada hasta que marques en qué ingredientes no son aptas
+        (<a asp-controller="AdminIngredientes" asp-action="Index">Ingredientes</a> → Editar → "No es apto para").</p>
+
+    @foreach (var (catalogo, titulo, icono, items, alBorrar) in secciones)
+    {
+        var clave = catalogo.ToString().ToLower();
+        <section class="tarjeta" id="@clave">
+            <h2 class="fs-6"><i class="bi @icono"></i> @titulo <span class="text-secondary fw-normal">(@items.Count)</span></h2>
+            <p class="small text-secondary">Al borrar: @alBorrar</p>
+
+            @foreach (var item in items)
+            {
+                <div class="fila-catalogo">
+                    <form asp-action="Guardar" method="post" class="d-flex flex-wrap gap-1 flex-grow-1"
+                          data-confirmar="¿Guardar los cambios de &quot;@item.Nombre&quot;?">
+                        <input type="hidden" name="catalogo" value="@catalogo" />
+                        <input type="hidden" name="id" value="@item.Id" />
+                        <input name="nombre" value="@item.Nombre" class="form-control form-control-sm flex-grow-1" maxlength="40" required aria-label="Nombre" />
+                        @if (catalogo == Catalogo.Gustos)
+                        {
+                            <select name="tipo" class="form-select form-select-sm w-auto" aria-label="Tipo">
+                                @foreach (var tipo in Enum.GetValues<TipoGusto>())
+                                {
+                                    <option value="@tipo" selected="@(tipo == item.Tipo)">@tipo</option>
+                                }
+                            </select>
+                        }
+                        @if (catalogo == Catalogo.Restricciones)
+                        {
+                            <input name="descripcion" value="@item.Descripcion" class="form-control form-control-sm w-100" maxlength="200" placeholder="Qué deja afuera" aria-label="Descripción" />
+                        }
+                        <button type="submit" class="btn btn-sm btn-outline-success" title="Guardar" aria-label="Guardar @item.Nombre"><i class="bi bi-check-lg"></i></button>
+                        <span class="small text-secondary w-100">@item.Uso</span>
+                    </form>
+                    <form asp-action="Eliminar" method="post" data-confirmar="¿Eliminar &quot;@item.Nombre&quot;? @alBorrar">
+                        <input type="hidden" name="catalogo" value="@catalogo" />
+                        <input type="hidden" name="id" value="@item.Id" />
+                        <button type="submit" class="btn btn-sm btn-link text-danger" title="Eliminar" aria-label="Eliminar @item.Nombre"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+            }
+
+            @* Alta *@
+            <form asp-action="Guardar" method="post" class="d-flex flex-wrap gap-1 mt-2" data-confirmar="¿Agregar a @titulo.ToLower()?">
+                <input type="hidden" name="catalogo" value="@catalogo" />
+                <input name="nombre" class="form-control form-control-sm flex-grow-1 w-auto" maxlength="40" required placeholder="Nuevo..." aria-label="Nombre nuevo" />
+                @if (catalogo == Catalogo.Gustos)
+                {
+                    <select name="tipo" class="form-select form-select-sm w-auto" aria-label="Tipo">
+                        @foreach (var tipo in Enum.GetValues<TipoGusto>())
+                        {
+                            <option value="@tipo">@tipo</option>
+                        }
+                    </select>
+                }
+                @if (catalogo == Catalogo.Restricciones)
+                {
+                    <input name="descripcion" class="form-control form-control-sm w-100" maxlength="200" placeholder="Qué deja afuera (se muestra en el perfil)" aria-label="Descripción" />
+                }
+                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Agregar</button>
+            </form>
+        </section>
+    }
+</div>

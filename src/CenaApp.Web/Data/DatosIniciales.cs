@@ -18,6 +18,11 @@ public static class DatosIniciales
         {
             CargarUsuarios(db, config);
         }
+        // Aparte, porque el rol llegó después (D-22): también se crea en una base que ya tenía usuarios.
+        if (!db.Usuarios.Any(u => u.Rol == Rol.SuperAdmin))
+        {
+            CargarSuperAdmin(db, config);
+        }
         // Aparte, porque las imágenes llegaron después (D-21): también se cargan en una base que ya tenía datos.
         // Solo si ningún ingrediente tiene imagen, para no pisar las que haya subido el admin.
         if (!db.Ingredientes.Any(i => i.Imagen != null))
@@ -540,6 +545,20 @@ public static class DatosIniciales
             db.Usuarios.Add(demo);
         }
 
+        db.SaveChanges();
+    }
+
+    // SuperAdmin de prueba (D-22). La contraseña sale de DatosIniciales:ClaveSuperAdmin; si no está, no se crea.
+    private static void CargarSuperAdmin(AppDbContext db, IConfiguration config)
+    {
+        var clave = config["DatosIniciales:ClaveSuperAdmin"];
+        if (string.IsNullOrEmpty(clave) || db.Usuarios.Any(u => u.Email == "superadmin@cenaapp.com"))
+        {
+            return;
+        }
+        var superAdmin = new Usuario { Email = "superadmin@cenaapp.com", Nombre = "SuperAdmin", Rol = Rol.SuperAdmin };
+        superAdmin.PasswordHash = new PasswordHasher<Usuario>().HashPassword(superAdmin, clave);
+        db.Usuarios.Add(superAdmin);
         db.SaveChanges();
     }
 

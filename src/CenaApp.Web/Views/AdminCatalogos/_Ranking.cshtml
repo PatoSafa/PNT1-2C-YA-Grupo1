@@ -1,0 +1,20 @@
+@* Lista "nombre — cantidad" con una barra proporcional al mayor. Se usa en el Panel. *@
+@model List<CenaApp.Web.ViewModels.ValorPanel>
+
+@if (Model.Count == 0)
+{
+    <p class="small text-secondary mb-0">Todavía no hay datos.</p>
+}
+else
+{
+    var maximo = Model.Max(v => v.Cantidad);
+    <ul class="list-unstyled mb-0 ranking">
+        @foreach (var v in Model)
+        {
+            <li>
+                <span class="d-flex justify-content-between small"><span>@v.Nombre</span><strong>@v.Cantidad</strong></span>
+                <span class="barra-progreso d-block"><span class="d-block" style="width: @(v.Cantidad * 100 / maximo)%"></span></span>
+            </li>
+        }
+    </ul>
+}

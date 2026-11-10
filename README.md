@@ -7,9 +7,9 @@
 A quien tiene restricciones alimentarias (vegetariana, vegana, sin gluten, sin lactosa, baja en sodio) o alergias, encontrar una receta le exige revisar los ingredientes uno por uno. CenaAPP lo hace por la persona:
 
 - **Muestra solo las recetas aptas para su perfil.** Los alérgenos y las restricciones de cada receta se calculan a partir de sus ingredientes, no se cargan a mano.
-- **Las ordena según sus gustos** (italiana, rápida, saludable…).
-- **Despensa:** muestra qué se puede cocinar con lo que ya hay en casa y qué falta comprar.
-- **Tiendas:** dónde comprar lo que falta, en un mapa con comercios de la zona.
+- **Las ordena según sus gustos** (italiana, rápida, saludable…) y su nivel de cocina, y sugiere recetas parecidas a sus favoritas.
+- **Despensa:** muestra qué se puede cocinar con lo que ya hay en casa (con cantidades opcionales) y qué falta comprar.
+- **Tiendas:** dónde comprar lo que falta, cerca de su ubicación, con comercios reales de OpenStreetMap.
 
 ## Integrantes
 
@@ -20,13 +20,16 @@ A quien tiene restricciones alimentarias (vegetariana, vegana, sin gluten, sin l
 | Pantalla | Ruta | Qué hace |
 |---|---|---|
 | Registro e inicio de sesión | `/Cuenta/Registrarse`, `/Cuenta/Ingresar` | Cuenta con email y contraseña (hasheada). El mismo login sirve para usuarios y admin. |
-| Onboarding y Perfil | `/Perfil`, `/Perfil/Editar` | Nombre, restricciones, alergias, gustos y nivel de cocina. |
-| Inicio | `/Recetas` | Recetas aptas para el perfil, ordenadas por gustos, con buscador y filtro por gusto. |
-| Detalle | `/Recetas/Detalle/{id}` | Ingredientes, pasos que se pueden marcar, alérgenos calculados y para qué restricciones es apta. Si la receta no existe, 404. |
+| Onboarding y Perfil | `/Perfil`, `/Perfil/Editar` | Nombre, foto, restricciones y alergias (con lo que deja afuera cada una), gustos y nivel de cocina (con lo que cambia cada nivel). |
+| Inicio | `/Recetas` | Recetas aptas para el perfil, ordenadas por gustos y nivel, con buscador, filtro por gusto y "Te puede gustar" (parecidas a las favoritas). |
+| Detalle | `/Recetas/Detalle/{id}` | Ingredientes con imagen, pasos que se pueden marcar, alérgenos calculados y para qué restricciones es apta. Si la receta no existe, 404. |
 | Mis favoritos | `/Recetas/Favoritos` | Recetas guardadas con el corazón (se marca con `fetch`, sin recargar). |
-| Mi Despensa | `/Despensa` | Ingredientes que hay en casa (por nombre o sinónimo), "Podés cocinar" (100 %) y "Casi listas" (≥ 50 %) con lo que falta comprar. Se actualiza con `fetch`. |
-| Tiendas | `/Tiendas` | Comercios de ejemplo cerca de ORT Yatay en un mapa (Leaflet), con filtro por tipo y ruta a pie. |
-| Administración | `/Admin/Recetas`, `/Admin/Ingredientes` | Alta, edición y baja de recetas e ingredientes. Solo para el rol Admin. |
+| Mi Despensa | `/Despensa` | Tabla "Tengo en casa" con cantidad opcional, "Podés cocinar" (100 %) y "Casi listas" (≥ 50 %) con lo que falta comprar ("+" para sumarlo), "¿Qué me falta para una favorita?" y "Ver tiendas". Se actualiza con `fetch`. |
+| Tiendas | `/Tiendas` | Comercios de OpenStreetMap cerca de la ubicación del usuario (o de ORT Yatay), filtrados por tipo y por los ingredientes a comprar, en un mapa (Leaflet) con ruta a pie. |
+| Administración | `/Admin`, `/Admin/Recetas`, `/Admin/Ingredientes`, `/Admin/Catalogos` | Panel con números, ABM de recetas, ingredientes (con imagen) y catálogos. Roles Admin y SuperAdmin. |
+| Usuarios | `/Admin/Usuarios` | ABM de usuarios: rol (Usuario, Admin, SuperAdmin) y cuenta activa o desactivada. Solo SuperAdmin. |
+
+Todas las acciones de guardar, eliminar o cancelar piden confirmación, y los resultados se muestran con un aviso.
 
 ## Tecnologías
 
@@ -35,7 +38,8 @@ A quien tiene restricciones alimentarias (vegetariana, vegana, sin gluten, sin l
 | Lenguaje y framework | C# / .NET 10, ASP.NET Core MVC con vistas Razor |
 | Base de datos | PostgreSQL 17 en Docker, con Entity Framework Core (code-first y migraciones) |
 | Estilos | Bootstrap + `wwwroot/css/estilos.css`; íconos con Bootstrap Icons |
-| Mapa | Leaflet + OpenStreetMap |
+| Mapa y comercios | Leaflet + OpenStreetMap; comercios con la Overpass API (gratis, sin clave) |
+| Íconos de ingredientes | Microsoft Fluent Emoji (licencia MIT), guardados en la base |
 | Tests | xUnit |
 | Versionado | Git y GitHub |
 
@@ -65,12 +69,15 @@ dotnet run --project src/CenaApp.Web
 
 Abrir http://localhost:5224.
 
-Al arrancar por primera vez, la app carga los datos iniciales: 32 recetas, 81 ingredientes y los catálogos. También crea dos usuarios de prueba, que existen **solo en desarrollo**:
+Al arrancar por primera vez, la app carga los datos iniciales: 32 recetas, 81 ingredientes con imagen y los catálogos. También crea tres usuarios de prueba, que existen **solo en desarrollo**:
 
 | Usuario | Contraseña | Rol |
 |---|---|---|
+| `superadmin@cenaapp.com` | `super1234` | SuperAdmin (además administra usuarios) |
 | `admin@cenaapp.com` | `admin1234` | Administrador |
 | `demo@cenaapp.com` | `demo1234` | Usuario (vegetariana, alérgica a frutos secos, con despensa cargada) |
+
+> **Tiendas en Windows 10:** el servidor de Overpass pide TLS 1.3 y Windows 10 no lo tiene, así que en esa máquina se ven los comercios de ejemplo con un aviso (E-05 en `docs/ERRORES.md`). En Windows 11, Linux, Docker y Render se ven los comercios reales.
 
 - Tests: `dotnet test`
 - Apagar la base: `docker compose down`. Los datos se conservan en el volumen `cenaapp-datos`; para borrarlos, `docker compose down -v`.
@@ -88,6 +95,7 @@ Render no tiene runtime nativo de .NET, así que la app se despliega como conten
    | `ConnectionStrings__CenaApp` | `Host=<hostname>;Port=5432;Database=<database>;Username=<username>;Password=<password>` |
    | `DatosIniciales__ClaveAdmin` | contraseña que elija el equipo para `admin@cenaapp.com` |
    | `DatosIniciales__ClaveDemo` | contraseña para `demo@cenaapp.com` |
+   | `DatosIniciales__ClaveSuperAdmin` | contraseña para `superadmin@cenaapp.com` |
 
    `PORT` la define Render: la app la lee al arrancar (`Program.cs`), igual que `server.port: ${PORT:8080}` en Spring.
 4. **Deploy.** En el primer arranque la app aplica las migraciones y carga los datos iniciales. En el log aparece una vez `fail: ... Failed executing DbCommand ... __EFMigrationsHistory`. Es normal: EF Core busca la tabla de historial antes de crearla.
@@ -182,11 +190,11 @@ src/CenaApp.Web/
   Services/                 reglas de negocio (aptitud de recetas, despensa, cuentas...)
   Models/                   entidades (tablas)
   ViewModels/               lo que recibe cada vista y los DTO de la API
-  Data/                     AppDbContext, datos iniciales y Migrations/
+  Data/                     AppDbContext, datos iniciales, Imagenes/ (íconos) y Migrations/
   Views/                    vistas Razor, una carpeta por controller
   wwwroot/                  estilos.css y los JS (favoritos, despensa, tiendas...)
   recetas.http              pruebas de la API
-tests/CenaApp.Tests/        tests xUnit de las reglas de aptitud y despensa
+tests/CenaApp.Tests/        tests xUnit: aptitud y nivel, despensa, sugerencias y tiendas (43)
 docs/                       consigna, decisiones, errores, arquitectura, diseño
 ```
 

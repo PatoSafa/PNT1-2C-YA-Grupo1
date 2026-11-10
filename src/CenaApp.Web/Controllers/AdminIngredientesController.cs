@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CenaApp.Web.Controllers;
 
-[Authorize(Roles = "Admin")]
+// Admin y SuperAdmin (D-22).
+[Authorize(Roles = "Admin,SuperAdmin")]
 [Route("Admin/Ingredientes/[action]/{id?}")]
 public class AdminIngredientesController : Controller
 {
