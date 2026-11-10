@@ -11,7 +11,17 @@
         <a asp-action="Editar" class="btn btn-vidrio btn-sm"><i class="bi bi-pencil"></i> Editar</a>
     </div>
     <div class="d-flex align-items-center gap-3 mt-3">
-        <div class="avatar"><i class="bi bi-person"></i></div>
+        <div class="avatar">
+            @if (Model.AvatarUrl is not null)
+            {
+                <img src="@Model.AvatarUrl" alt="Foto de perfil de @Model.Nombre" />
+            }
+            else
+            {
+                @* Sin foto: la inicial del nombre. *@
+                <span>@Model.Nombre.Substring(0, 1).ToUpper()</span>
+            }
+        </div>
         <div>
             <h2 class="fs-4 mb-0">@Model.Nombre</h2>
             <p>Nivel: @Model.Nivel · @Model.Email</p>
@@ -21,6 +31,11 @@
 
 <div class="cuerpo">
     <section class="tarjeta superpuesta">
+        <h3 class="fs-6"><i class="bi bi-mortarboard text-primary"></i> Nivel de cocina: @Model.Nivel</h3>
+        <p class="small text-secondary mb-0">@NivelesDeCocina.QueCambia(Model.Nivel)</p>
+    </section>
+
+    <section class="tarjeta">
         <h3 class="fs-6"><i class="bi bi-slash-circle text-warning"></i> Restricciones alimentarias</h3>
         @if (Model.Restricciones.Count == 0)
         {
@@ -29,11 +44,17 @@
         else
         {
             <div class="chips">
-                @foreach (var r in Model.Restricciones)
+                @foreach (var (nombre, _) in Model.Restricciones)
                 {
-                    <span class="etiqueta">@r</span>
+                    <span class="etiqueta">@nombre</span>
                 }
             </div>
+            <ul class="notas-perfil">
+                @foreach (var (nombre, nota) in Model.Restricciones.Where(r => r.Nota is not null))
+                {
+                    <li><strong>@nombre:</strong> @nota</li>
+                }
+            </ul>
         }
     </section>
 
@@ -46,11 +67,17 @@
         else
         {
             <div class="chips">
-                @foreach (var a in Model.Alergenos)
+                @foreach (var (nombre, _) in Model.Alergenos)
                 {
-                    <span class="etiqueta etiqueta-alergia">@a</span>
+                    <span class="etiqueta etiqueta-alergia">@nombre</span>
                 }
             </div>
+            <ul class="notas-perfil notas-alergia">
+                @foreach (var (nombre, nota) in Model.Alergenos.Where(a => a.Nota is not null))
+                {
+                    <li><strong>@nombre:</strong> @nota</li>
+                }
+            </ul>
         }
     </section>
 
@@ -76,7 +103,7 @@
         <p class="mb-0">Mantené tu perfil actualizado para recibir las mejores recomendaciones de recetas según tus preferencias y necesidades.</p>
     </section>
 
-    <form asp-controller="Cuenta" asp-action="Salir" method="post">
+    <form asp-controller="Cuenta" asp-action="Salir" method="post" data-confirmar="¿Cerrar sesión?">
         <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
     </form>
 </div>

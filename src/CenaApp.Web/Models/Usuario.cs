@@ -24,6 +24,12 @@ public class Usuario
 
     public DateTime CreadoEn { get; set; } = DateTime.UtcNow;
 
+    // Foto de perfil opcional, guardada en la base (D-25). AvatarTipo: "image/png", "image/jpeg" o "image/webp".
+    public byte[]? Avatar { get; set; }
+
+    [MaxLength(20)]
+    public string? AvatarTipo { get; set; }
+
     // Perfil
     public List<Restriccion> Restricciones { get; set; } = [];
     public List<Alergeno> Alergenos { get; set; } = [];

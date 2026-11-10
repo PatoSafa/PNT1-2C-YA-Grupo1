@@ -201,7 +201,8 @@ public class RecetaService : IRecetaService
         return FiltrarYOrdenar(recetas,
             usuario.Restricciones.Select(r => r.Id).ToList(),
             usuario.Alergenos.Select(a => a.Id).ToList(),
-            usuario.Gustos.Select(g => g.Id).ToList());
+            usuario.Gustos.Select(g => g.Id).ToList(),
+            usuario.Nivel);
     }
 
     // ---------- Favoritos (RF12) ----------
@@ -304,15 +305,31 @@ public class RecetaService : IRecetaService
         return receta.Gustos.Count(g => gustosIds.Contains(g.Id));
     }
 
-    // Lo que ve el usuario en el Inicio: sin sus alérgenos, aptas para todas sus restricciones,
-    // primero las que más coinciden con sus gustos y, a igual coincidencia, por nombre.
+    // Nivel de cocina (D-23): un Principiante no ve recetas Difíciles.
+    public static bool PuedeVer(Receta receta, Nivel nivel) =>
+        !(nivel == Nivel.Principiante && receta.Dificultad == Dificultad.Dificil);
+
+    // Orden por nivel (menor = antes): al Principiante, primero las Fáciles; al Avanzado, primero las Difíciles;
+    // al Intermedio le da igual.
+    public static int OrdenPorNivel(Receta receta, Nivel nivel) => nivel switch
+    {
+        Nivel.Principiante => (int)receta.Dificultad,
+        Nivel.Avanzado => (int)Dificultad.Dificil - (int)receta.Dificultad,
+        _ => 0,
+    };
+
+    // Lo que ve el usuario en el Inicio: sin sus alérgenos, aptas para todas sus restricciones y para su nivel,
+    // primero las que más coinciden con sus gustos, después según su nivel y, al final, por nombre.
     public static List<Receta> FiltrarYOrdenar(IEnumerable<Receta> recetas,
-        ICollection<int> restriccionesIds, ICollection<int> alergenosIds, ICollection<int> gustosIds)
+        ICollection<int> restriccionesIds, ICollection<int> alergenosIds, ICollection<int> gustosIds,
+        Nivel nivel = Nivel.Intermedio)
     {
         return recetas
             .Where(r => !ContieneAlergeno(r, alergenosIds))
             .Where(r => EsApta(r, restriccionesIds))
+            .Where(r => PuedeVer(r, nivel))
             .OrderByDescending(r => GustosEnComun(r, gustosIds))
+            .ThenBy(r => OrdenPorNivel(r, nivel))
             .ThenBy(r => r.Nombre)
             .ToList();
     }

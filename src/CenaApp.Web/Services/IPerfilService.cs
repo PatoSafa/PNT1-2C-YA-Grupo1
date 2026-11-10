@@ -12,5 +12,9 @@ public interface IPerfilService
     // Carga las opciones de los catálogos en el formulario (restricciones, alérgenos, gustos).
     Task CargarOpcionesAsync(PerfilFormularioViewModel formulario);
 
-    Task GuardarAsync(int usuarioId, PerfilFormularioViewModel formulario);
+    // Qué ingredientes del catálogo tiene cada alérgeno (id → "Almendras, Nueces"), para explicar qué deja afuera.
+    Task<Dictionary<int, string>> IngredientesPorAlergenoAsync();
+
+    // Guarda el perfil. avatar: la foto nueva ya validada (null = no cambia, salvo que marque "Quitar foto").
+    Task GuardarAsync(int usuarioId, PerfilFormularioViewModel formulario, byte[]? avatar, string? avatarTipo);
 }

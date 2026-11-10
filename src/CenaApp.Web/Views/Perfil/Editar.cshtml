@@ -5,13 +5,6 @@
     ViewData["Title"] = Model.EsOnboarding ? "Bienvenida" : "Editar perfil";
     ViewData["Seccion"] = "Perfil";
     ViewData["OcultarBarra"] = Model.EsOnboarding;
-
-    var niveles = new (Nivel Valor, string Descripcion)[]
-    {
-        (Nivel.Principiante, "Recién empiezo"),
-        (Nivel.Intermedio, "Tengo experiencia básica"),
-        (Nivel.Avanzado, "Soy experimentado"),
-    };
 }
 
 @if (Model.EsOnboarding)
@@ -29,13 +22,42 @@ else
     </header>
 }
 
-<form asp-action="Editar" method="post" class="cuerpo" novalidate>
+@* enctype multipart: hace falta para mandar la foto. data-confirmar: confirmación antes de guardar (D-24). *@
+<form asp-action="Editar" method="post" class="cuerpo" enctype="multipart/form-data" novalidate
+      data-confirmar="@(Model.EsOnboarding ? "¿Empezamos con este perfil? Lo podés cambiar cuando quieras." : "¿Guardar los cambios de tu perfil?")">
     <input type="hidden" asp-for="EsOnboarding" />
 
     <section class="tarjeta @(Model.EsOnboarding ? "" : "superpuesta")">
         <label asp-for="Nombre" class="form-label h3 fs-5"></label>
         <input asp-for="Nombre" class="form-control" placeholder="Tu nombre" autocomplete="given-name" />
         <span asp-validation-for="Nombre" class="text-danger small"></span>
+
+        @* Foto de perfil opcional (D-25). *@
+        <div class="d-flex align-items-center gap-3 mt-3">
+            <div class="avatar avatar-formulario" id="vista-avatar">
+                @if (Model.AvatarActual is not null)
+                {
+                    <img src="@Model.AvatarActual" alt="Tu foto de perfil" />
+                }
+                else
+                {
+                    <i class="bi bi-person"></i>
+                }
+            </div>
+            <div class="flex-grow-1">
+                <label asp-for="Avatar" class="form-label small mb-1"></label>
+                <input asp-for="Avatar" type="file" accept="image/png,image/jpeg,image/webp" class="form-control form-control-sm" />
+                <span class="small text-secondary">PNG, JPG o WebP, hasta @Imagenes.TamanioMaximoKb KB.</span>
+                <span asp-validation-for="Avatar" class="text-danger small d-block"></span>
+                @if (Model.AvatarActual is not null)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="QuitarAvatar" class="form-check-input" />
+                        <label asp-for="QuitarAvatar" class="form-check-label small">Quitar la foto</label>
+                    </div>
+                }
+            </div>
+        </div>
     </section>
 
     <section class="tarjeta">
@@ -45,10 +67,17 @@ else
             @foreach (var r in Model.Restricciones)
             {
                 <input type="checkbox" class="btn-check" name="RestriccionesIds" value="@r.Id" id="restriccion-@r.Id"
-                       checked="@Model.RestriccionesIds.Contains(r.Id)" />
+                       checked="@Model.RestriccionesIds.Contains(r.Id)" data-nota="nota-restriccion-@r.Id" />
                 <label class="chip" for="restriccion-@r.Id" title="@r.Descripcion">@r.Nombre</label>
             }
         </div>
+        @* Qué queda afuera con cada una marcada (js/perfil.js muestra u oculta cada nota al tildar). *@
+        <ul class="notas-perfil">
+            @foreach (var r in Model.Restricciones)
+            {
+                <li id="nota-restriccion-@r.Id" hidden="@(!Model.RestriccionesIds.Contains(r.Id))"><strong>@r.Nombre:</strong> @r.Descripcion</li>
+            }
+        </ul>
     </section>
 
     <section class="tarjeta">
@@ -57,11 +86,19 @@ else
         <div class="chips">
             @foreach (var a in Model.Alergenos)
             {
+                var ingredientes = Model.IngredientesPorAlergeno.GetValueOrDefault(a.Id);
                 <input type="checkbox" class="btn-check" name="AlergenosIds" value="@a.Id" id="alergeno-@a.Id"
-                       checked="@Model.AlergenosIds.Contains(a.Id)" />
-                <label class="chip chip-alergia" for="alergeno-@a.Id">@a.Nombre</label>
+                       checked="@Model.AlergenosIds.Contains(a.Id)" data-nota="nota-alergeno-@a.Id" />
+                <label class="chip chip-alergia" for="alergeno-@a.Id" title="@(ingredientes is null ? "" : $"Sin recetas con: {ingredientes}")">@a.Nombre</label>
             }
         </div>
+        <ul class="notas-perfil notas-alergia">
+            @foreach (var a in Model.Alergenos)
+            {
+                var ingredientes = Model.IngredientesPorAlergeno.GetValueOrDefault(a.Id) ?? "ningún ingrediente del catálogo por ahora";
+                <li id="nota-alergeno-@a.Id" hidden="@(!Model.AlergenosIds.Contains(a.Id))"><strong>@a.Nombre:</strong> sin recetas con @ingredientes.</li>
+            }
+        </ul>
     </section>
 
     <section class="tarjeta">
@@ -79,13 +116,15 @@ else
 
     <section class="tarjeta">
         <h2 class="fs-5"><i class="bi bi-mortarboard"></i> ¿Cuál es tu nivel de cocina?</h2>
-        @foreach (var (valor, descripcion) in niveles)
+        <p class="small text-secondary">Cambia qué recetas ves y en qué orden.</p>
+        @foreach (var (valor, descripcion, queCambia) in NivelesDeCocina.Todos)
         {
             <input type="radio" class="btn-check" name="Nivel" value="@valor" id="nivel-@valor"
                    checked="@(Model.Nivel == valor)" />
             <label class="opcion" for="nivel-@valor">
                 <span class="fw-medium">@valor</span>
                 <small>@descripcion</small>
+                <small class="que-cambia"><i class="bi bi-arrow-return-right"></i> @queCambia</small>
             </label>
         }
     </section>
@@ -93,7 +132,7 @@ else
     <div class="d-flex gap-2 mb-4">
         @if (!Model.EsOnboarding)
         {
-            <a asp-action="Index" class="btn btn-outline-primary">Cancelar</a>
+            <a asp-action="Index" class="btn btn-outline-primary" data-confirmar="¿Descartar los cambios del perfil?">Cancelar</a>
         }
         <button type="submit" class="btn btn-primary flex-grow-1">
             @(Model.EsOnboarding ? "Comenzar" : "Guardar") <i class="bi bi-arrow-right"></i>
@@ -103,4 +142,5 @@ else
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/perfil.js" asp-append-version="true"></script>
 }

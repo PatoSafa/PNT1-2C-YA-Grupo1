@@ -16,6 +16,7 @@ public enum Nivel
     Avanzado
 }
 
+// El orden importa: de más fácil a más difícil (lo usa RecetaService.OrdenPorNivel).
 public enum Dificultad
 {
     // Display: cómo se muestra en los <select> (el valor guardado sigue siendo "Facil").

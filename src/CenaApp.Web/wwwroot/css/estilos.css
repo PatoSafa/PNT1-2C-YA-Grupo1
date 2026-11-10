@@ -527,6 +527,45 @@ h1, h2, h3, h4 {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* En el formulario el fondo es blanco: el avatar va sobre violeta claro. */
+.avatar-formulario {
+    background: var(--color-perfil-claro);
+    color: var(--color-perfil);
+}
+
+/* Notas de lo que deja afuera cada restricción o alergia */
+.notas-perfil {
+    list-style: none;
+    padding: .5rem .75rem;
+    margin: .75rem 0 0;
+    border-radius: var(--radio-chico);
+    background: var(--color-ambar-claro);
+    color: var(--color-ambar-texto);
+    font-size: .8125rem;
+}
+
+.notas-perfil:not(:has(li:not([hidden]))) {
+    display: none;
+}
+
+.notas-alergia {
+    background: var(--color-peligro-claro);
+    color: var(--color-peligro-texto);
+}
+
+.opcion .que-cambia {
+    display: block;
+    margin-top: .15rem;
+    opacity: .85;
 }
 
 .consejo {

@@ -134,4 +134,48 @@ public class AptitudRecetasTests
 
         Assert.Equal(["Pizza rápida", "Bruschetta", "Ñoquis", "Arroz"], visibles.Select(r => r.Nombre));
     }
+
+    // ---------- Nivel de cocina (D-23) ----------
+
+    private static Receta[] UnaDeCadaDificultad() =>
+    [
+        new() { Nombre = "A - fácil", Dificultad = Dificultad.Facil },
+        new() { Nombre = "B - media", Dificultad = Dificultad.Media },
+        new() { Nombre = "C - difícil", Dificultad = Dificultad.Dificil },
+    ];
+
+    [Fact]
+    public void FiltrarYOrdenar_Principiante_NoVeLasDificiles_YPrimeroLasFaciles()
+    {
+        var visibles = RecetaService.FiltrarYOrdenar(UnaDeCadaDificultad(), [], [], [], Nivel.Principiante);
+
+        Assert.Equal(["A - fácil", "B - media"], visibles.Select(r => r.Nombre));
+    }
+
+    [Fact]
+    public void FiltrarYOrdenar_Avanzado_VeTodas_YPrimeroLasDificiles()
+    {
+        var visibles = RecetaService.FiltrarYOrdenar(UnaDeCadaDificultad(), [], [], [], Nivel.Avanzado);
+
+        Assert.Equal(["C - difícil", "B - media", "A - fácil"], visibles.Select(r => r.Nombre));
+    }
+
+    [Fact]
+    public void FiltrarYOrdenar_Intermedio_VeTodas_PorNombre()
+    {
+        var visibles = RecetaService.FiltrarYOrdenar(UnaDeCadaDificultad(), [], [], [], Nivel.Intermedio);
+
+        Assert.Equal(["A - fácil", "B - media", "C - difícil"], visibles.Select(r => r.Nombre));
+    }
+
+    [Fact]
+    public void FiltrarYOrdenar_LosGustosPesanMasQueElNivel()
+    {
+        var recetas = UnaDeCadaDificultad();
+        recetas[1].Gustos = [Italiana]; // la media coincide con el gusto
+
+        var visibles = RecetaService.FiltrarYOrdenar(recetas, [], [], [Italiana.Id], Nivel.Avanzado);
+
+        Assert.Equal(["B - media", "C - difícil", "A - fácil"], visibles.Select(r => r.Nombre));
+    }
 }

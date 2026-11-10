@@ -137,7 +137,8 @@ public class DespensaService : IDespensaService
         var aptas = RecetaService.FiltrarYOrdenar(recetas,
             usuario.Restricciones.Select(r => r.Id).ToList(),
             usuario.Alergenos.Select(a => a.Id).ToList(),
-            []);
+            [],
+            usuario.Nivel);
 
         return Clasificar(aptas, await ObtenerAsync(usuarioId));
     }

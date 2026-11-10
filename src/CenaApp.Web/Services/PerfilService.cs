@@ -30,15 +30,37 @@ public class PerfilService : IPerfilService
         formulario.Restricciones = await _db.Restricciones.OrderBy(r => r.Nombre).ToListAsync();
         formulario.Alergenos = await _db.Alergenos.OrderBy(a => a.Nombre).ToListAsync();
         formulario.Gustos = await _db.Gustos.OrderBy(g => g.Tipo).ThenBy(g => g.Nombre).ToListAsync();
+        formulario.IngredientesPorAlergeno = await IngredientesPorAlergenoAsync();
     }
 
-    public async Task GuardarAsync(int usuarioId, PerfilFormularioViewModel formulario)
+    public async Task<Dictionary<int, string>> IngredientesPorAlergenoAsync()
+    {
+        var ingredientes = await _db.Ingredientes.Include(i => i.Alergenos).OrderBy(i => i.Nombre).ToListAsync();
+        return ingredientes
+            .SelectMany(i => i.Alergenos.Select(a => (AlergenoId: a.Id, i.Nombre)))
+            .GroupBy(x => x.AlergenoId)
+            .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.Nombre)));
+    }
+
+    public async Task GuardarAsync(int usuarioId, PerfilFormularioViewModel formulario, byte[]? avatar, string? avatarTipo)
     {
         var usuario = await ObtenerAsync(usuarioId)
             ?? throw new InvalidOperationException($"No existe el usuario {usuarioId}.");
 
         usuario.Nombre = formulario.Nombre.Trim();
         usuario.Nivel = formulario.Nivel;
+
+        // Foto: una nueva reemplaza a la anterior; "Quitar foto" la borra; si no, queda la que estaba.
+        if (avatar is not null)
+        {
+            usuario.Avatar = avatar;
+            usuario.AvatarTipo = avatarTipo;
+        }
+        else if (formulario.QuitarAvatar)
+        {
+            usuario.Avatar = null;
+            usuario.AvatarTipo = null;
+        }
 
         // Se reemplazan las listas completas por lo que quedó marcado. EF Core calcula qué filas
         // de las tablas intermedias agregar y cuáles borrar.

@@ -270,6 +270,13 @@ namespace CenaApp.Web.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<byte[]>("Avatar")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("AvatarTipo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<DateTime>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
