@@ -48,8 +48,15 @@ builder.Services.AddScoped<ICuentaService, CuentaService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
 builder.Services.AddScoped<IDespensaService, DespensaService>();
 builder.Services.AddScoped<IIngredienteService, IngredienteService>();
-// Sin estado ni base de datos: una sola instancia para toda la app.
-builder.Services.AddSingleton<IComercioService, ComercioService>();
+// Comercios: consulta OpenStreetMap (Overpass) por HTTP (D-20). AddHttpClient le da al servicio un HttpClient
+// ya configurado; la caché en memoria guarda las respuestas para no repetir consultas.
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<IComercioService, ComercioService>(cliente =>
+{
+    cliente.Timeout = TimeSpan.FromSeconds(12);
+    // Overpass pide identificar la app que consulta.
+    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("CenaAPP/1.0 (TP ORT PNT1)");
+});
 
 // Login por cookie (sin ASP.NET Core Identity completo: son pocas clases propias, fáciles de explicar). Si alguien sin sesión entra a una
 // página con [Authorize], lo manda a /Cuenta/Ingresar; si no tiene el rol, a /Cuenta/AccesoDenegado.

@@ -1,0 +1,66 @@
+@* Lista de comercios que devuelve /Tiendas/Buscar. Cada tarjeta lleva en data-* lo que js/tiendas.js usa para el marcador. *@
+@using System.Globalization
+@model CenaApp.Web.ViewModels.TiendasListaViewModel
+@{
+    var ar = CultureInfo.GetCultureInfo("es-AR");
+    string Coordenada(double valor) => valor.ToString(CultureInfo.InvariantCulture);
+}
+
+@if (Model.SonDeEjemplo)
+{
+    <div class="alert alert-warning small" role="status">
+        <i class="bi bi-wifi-off"></i> No pudimos consultar OpenStreetMap. Te mostramos comercios de ejemplo cerca de @Model.NombreCentro.
+    </div>
+}
+
+<p class="small text-secondary" id="resumen-comercios" data-ubicacion-real="@(Model.UbicacionReal ? "si" : "no")">
+    @Model.Comercios.Count @(Model.Comercios.Count == 1 ? "comercio" : "comercios")
+    @(Model.UbicacionReal ? "cerca de tu ubicación" : $"cerca de {Model.NombreCentro}")
+    @(Model.FiltraPorIngredientes ? "donde conseguís lo que necesitás" : "")
+    @if (!Model.SonDeEjemplo)
+    {
+        @* Licencia ODbL: los datos de OpenStreetMap se usan citando la fuente. *@
+        <span class="d-block">Datos: © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
+    }
+</p>
+
+@if (Model.Comercios.Count == 0)
+{
+    <div class="vacio">
+        <p>No encontramos comercios con estos filtros.</p>
+        <p class="small">Probá con "Todas" o quitando algún ingrediente.</p>
+    </div>
+}
+
+@foreach (var c in Model.Comercios)
+{
+    <article class="tarjeta tarjeta-comercio" data-comercio="@c.Id" data-lat="@Coordenada(c.Lat)" data-lng="@Coordenada(c.Lng)"
+             data-nombre="@c.Nombre" data-emoji="@c.Emoji" data-direccion="@c.Direccion" data-horario="@c.Horario">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fs-3" aria-hidden="true">@c.Emoji</span>
+            <div class="flex-grow-1 min-w-0">
+                <h2 class="fs-6 mb-0 text-truncate">@c.Nombre</h2>
+                <span class="small text-secondary">@c.Tipo</span>
+            </div>
+            <span class="distancia">@c.DistanciaKm.ToString("0.0", ar) km</span>
+        </div>
+        <ul class="list-unstyled small my-3">
+            <li><i class="bi bi-geo-alt text-success"></i> @c.Direccion</li>
+            <li><i class="bi bi-clock text-success"></i> @c.Horario</li>
+            @if (c.Consigue.Count > 0)
+            {
+                <li><i class="bi bi-bag-check text-success"></i> Conseguís: @string.Join(", ", c.Consigue)</li>
+            }
+        </ul>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-success flex-grow-1 ver-en-mapa" data-comercio="@c.Id">
+                <i class="bi bi-map"></i> Ver en el mapa
+            </button>
+            @* RF21: la ruta a pie se abre en la app de mapas del celular. *@
+            <a class="btn btn-success flex-grow-1" target="_blank" rel="noopener"
+               href="https://www.google.com/maps/dir/?api=1&destination=@Coordenada(c.Lat),@Coordenada(c.Lng)&travelmode=walking">
+                <i class="bi bi-sign-turn-right"></i> Cómo llegar
+            </a>
+        </div>
+    </article>
+}

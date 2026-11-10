@@ -1,22 +1,25 @@
-// Contrato del servicio de comercios: la lista fija de comercios de ejemplo para la pantalla Tiendas.
+// Contrato del servicio de comercios: dónde comprar cerca del usuario (pantalla Tiendas, D-20).
+using CenaApp.Web.Models;
+
 namespace CenaApp.Web.Services;
 
 public interface IComercioService
 {
-    // Punto desde el que se miden las distancias y donde se centra el mapa (ORT Yatay, D-15).
+    // Punto por defecto si el usuario no comparte su ubicación (ORT Yatay).
     (double Lat, double Lng, string Nombre) Centro { get; }
 
     // Tipos de comercio, para los filtros.
     List<string> Tipos();
 
-    // Comercios del tipo pedido (o todos), del más cercano al más lejano (RF20).
-    List<Comercio> Listar(string? tipo = null);
+    // Comercios de alimentos cerca de (lat, lng), del tipo pedido (o todos). Si se pasan ingredientes, solo los
+    // comercios que venden al menos uno, primero los que venden más y después los más cercanos (RF20).
+    Task<ResultadoComercios> BuscarAsync(double lat, double lng, string? tipo, List<Ingrediente> ingredientes);
 }
 
-// Un comercio. No es una entidad: no se guarda en la base (la doc funcional dice que los comercios
-// salen del servicio de mapas; por ahora son una lista fija, D-04 y D-08).
+// Un comercio. No es una entidad: no se guarda en la base, sale de OpenStreetMap (o de la lista de ejemplo).
+// Consigue: cuáles de los ingredientes buscados se pueden comprar ahí.
 public record Comercio(
-    int Id,
+    string Id,
     string Nombre,
     string Tipo,
     string Emoji,
@@ -24,4 +27,8 @@ public record Comercio(
     string Horario,
     double Lat,
     double Lng,
-    double DistanciaKm);
+    double DistanciaKm,
+    List<string> Consigue);
+
+// SonDeEjemplo: true si OpenStreetMap no respondió y se muestran los comercios fijos de ejemplo.
+public record ResultadoComercios(List<Comercio> Comercios, bool SonDeEjemplo);
