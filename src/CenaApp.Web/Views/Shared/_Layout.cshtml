@@ -43,7 +43,10 @@
     }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <partial name="_Avisos" />
+
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/confirmar.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

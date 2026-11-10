@@ -18,8 +18,6 @@
         </div>
     </section>
 
-    <partial name="_Avisos" />
-
     <p class="small text-secondary">@Model.Count recetas</p>
 
     @foreach (var r in Model)
@@ -40,7 +38,3 @@
         </article>
     }
 </div>
-
-@section Scripts {
-    <script src="~/js/confirmar.js" asp-append-version="true"></script>
-}
