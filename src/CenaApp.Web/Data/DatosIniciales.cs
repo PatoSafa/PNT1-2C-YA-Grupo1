@@ -18,6 +18,57 @@ public static class DatosIniciales
         {
             CargarUsuarios(db, config);
         }
+        // Aparte, porque las imágenes llegaron después (D-21): también se cargan en una base que ya tenía datos.
+        // Solo si ningún ingrediente tiene imagen, para no pisar las que haya subido el admin.
+        if (!db.Ingredientes.Any(i => i.Imagen != null))
+        {
+            CargarImagenes(db);
+        }
+    }
+
+    // ---------- Imágenes de ingredientes (D-21) ----------
+    // Archivos de Data/Imagenes (íconos de Microsoft Fluent Emoji, licencia MIT en Data/Imagenes/LICENCIA.txt).
+    // Primero se busca por el nombre del ingrediente; si no tiene uno propio, se usa el de su grupo.
+    private static readonly Dictionary<string, string> ImagenPorIngrediente = new()
+    {
+        ["Papa"] = "potato", ["Cebolla"] = "onion", ["Cebolla de verdeo"] = "onion", ["Pimiento"] = "bell_pepper",
+        ["Zanahoria"] = "carrot", ["Zucchini"] = "cucumber", ["Pepino"] = "cucumber", ["Champiñones"] = "brown_mushroom",
+        ["Tomate"] = "tomato", ["Salsa de tomate"] = "tomato", ["Berenjena"] = "eggplant", ["Choclo"] = "ear_of_corn",
+        ["Ajo"] = "garlic", ["Perejil"] = "herb", ["Cilantro"] = "herb", ["Menta"] = "herb",
+        ["Banana"] = "banana", ["Limón"] = "lemon", ["Palta"] = "avocado", ["Manzana"] = "green_apple",
+        ["Frutos rojos"] = "strawberry", ["Pera"] = "pear", ["Naranja"] = "tangerine",
+        ["Pechuga de pollo"] = "poultry_leg", ["Carne vacuna"] = "cut_of_meat", ["Merluza"] = "fish", ["Salmón"] = "fish",
+        ["Huevo"] = "egg", ["Leche"] = "glass_of_milk", ["Leche de almendras"] = "glass_of_milk", ["Yogur natural"] = "bowl_with_spoon",
+        ["Arroz"] = "cooked_rice", ["Arroz integral"] = "cooked_rice", ["Fideos de arroz"] = "steaming_bowl",
+        ["Avena"] = "bowl_with_spoon", ["Avena sin gluten"] = "bowl_with_spoon",
+        ["Tortilla de trigo"] = "flatbread", ["Pan rallado"] = "bread", ["Nueces"] = "chestnut", ["Almendras"] = "peanuts",
+        ["Leche de coco"] = "coconut", ["Caldo de verduras"] = "pot_of_food", ["Aceitunas"] = "olive", ["Aceite de oliva"] = "olive",
+        ["Aceite"] = "sunflower", ["Agua"] = "droplet", ["Cacao amargo"] = "chocolate_bar", ["Jarabe de agave"] = "honey_pot",
+        ["Pimentón"] = "hot_pepper", ["Curry en polvo"] = "curry_rice",
+    };
+
+    private static readonly Dictionary<string, string> ImagenPorGrupo = new()
+    {
+        ["Verdura"] = "leafy_green", ["Fruta"] = "red_apple", ["Carne"] = "cut_of_meat", ["Pescado"] = "fish",
+        ["Huevo"] = "egg", ["Lácteo"] = "cheese_wedge", ["Cereal y harina"] = "sheaf_of_rice", ["Legumbre"] = "beans",
+        ["Fruto seco y semilla"] = "chestnut", ["Otro"] = "canned_food", ["Condimento"] = "salt", ["Básico"] = "salt",
+    };
+
+    private static void CargarImagenes(AppDbContext db)
+    {
+        var carpeta = Path.Combine(AppContext.BaseDirectory, "Data", "Imagenes");
+        foreach (var ingrediente in db.Ingredientes.ToList())
+        {
+            var archivo = ImagenPorIngrediente.GetValueOrDefault(ingrediente.Nombre)
+                ?? ImagenPorGrupo.GetValueOrDefault(ingrediente.Grupo);
+            var ruta = Path.Combine(carpeta, $"{archivo}.png");
+            if (archivo is not null && File.Exists(ruta))
+            {
+                ingrediente.Imagen = File.ReadAllBytes(ruta);
+                ingrediente.ImagenTipo = "image/png";
+            }
+        }
+        db.SaveChanges();
     }
 
     private static void CargarCatalogo(AppDbContext db)

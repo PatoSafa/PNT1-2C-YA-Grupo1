@@ -46,7 +46,7 @@ else
             </div>
             <div class="flex-grow-1">
                 <label asp-for="Avatar" class="form-label small mb-1"></label>
-                <input asp-for="Avatar" type="file" accept="image/png,image/jpeg,image/webp" class="form-control form-control-sm" />
+                <input asp-for="Avatar" type="file" accept="image/png,image/jpeg,image/webp" class="form-control form-control-sm" data-vista-previa="vista-avatar" />
                 <span class="small text-secondary">PNG, JPG o WebP, hasta @Imagenes.TamanioMaximoKb KB.</span>
                 <span asp-validation-for="Avatar" class="text-danger small d-block"></span>
                 @if (Model.AvatarActual is not null)
@@ -143,4 +143,5 @@ else
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/perfil.js" asp-append-version="true"></script>
+    <script src="~/js/imagen.js" asp-append-version="true"></script>
 }

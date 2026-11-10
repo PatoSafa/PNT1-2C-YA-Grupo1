@@ -41,6 +41,12 @@ public class IngredienteFormularioViewModel
     public List<int> AlergenosIds { get; set; } = [];
     public List<int> RestriccionesIncompatiblesIds { get; set; } = [];
 
+    // Imagen nueva (opcional) y si se quiere sacar la que tiene (D-21).
+    [Display(Name = "Imagen")]
+    public IFormFile? Imagen { get; set; }
+    [Display(Name = "Quitar la imagen")]
+    public bool QuitarImagen { get; set; }
+
     // Opciones para dibujar el formulario (las carga el controller).
     public List<Alergeno> Alergenos { get; set; } = [];
     public List<Restriccion> Restricciones { get; set; } = [];

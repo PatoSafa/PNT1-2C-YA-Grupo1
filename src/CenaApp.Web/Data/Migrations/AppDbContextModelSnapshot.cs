@@ -122,6 +122,13 @@ namespace CenaApp.Web.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<byte[]>("Imagen")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ImagenTipo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(60)

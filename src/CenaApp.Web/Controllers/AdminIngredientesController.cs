@@ -39,13 +39,14 @@ public class AdminIngredientesController : Controller
     public async Task<IActionResult> Crear(IngredienteFormularioViewModel formulario)
     {
         formulario.Id = null;
+        var (imagen, tipo) = await LeerImagenAsync(formulario);
         if (!await EsValidoAsync(formulario))
         {
             await _ingredientes.CargarOpcionesAsync(formulario);
             return View("Formulario", formulario);
         }
 
-        var creado = await _ingredientes.CrearAsync(formulario);
+        var creado = await _ingredientes.CrearAsync(formulario, imagen, tipo);
         TempData["Exito"] = $"Se creó el ingrediente {creado.Nombre}.";
         return RedirectToAction(nameof(Index));
     }
@@ -78,13 +79,14 @@ public class AdminIngredientesController : Controller
     public async Task<IActionResult> Editar(int id, IngredienteFormularioViewModel formulario)
     {
         formulario.Id = id;
+        var (imagen, tipo) = await LeerImagenAsync(formulario);
         if (!await EsValidoAsync(formulario))
         {
             await _ingredientes.CargarOpcionesAsync(formulario);
             return View("Formulario", formulario);
         }
 
-        if (!await _ingredientes.ActualizarAsync(id, formulario))
+        if (!await _ingredientes.ActualizarAsync(id, formulario, imagen, tipo))
         {
             return NotFound();
         }
@@ -106,6 +108,21 @@ public class AdminIngredientesController : Controller
             TempData["Error"] = error;
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    // Si subió una imagen, la valida (tamaño y que sea una imagen de verdad); el error va al ModelState.
+    private async Task<(byte[]? Datos, string? Tipo)> LeerImagenAsync(IngredienteFormularioViewModel formulario)
+    {
+        if (formulario.Imagen is null)
+        {
+            return (null, null);
+        }
+        var (datos, tipo, error) = await Imagenes.LeerAsync(formulario.Imagen);
+        if (error is not null)
+        {
+            ModelState.AddModelError(nameof(formulario.Imagen), error);
+        }
+        return (datos, tipo);
     }
 
     // Data Annotations (ModelState) + reglas del servicio, todo en el mismo ModelState para mostrarlo en el formulario.

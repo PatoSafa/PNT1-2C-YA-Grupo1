@@ -47,7 +47,7 @@ public class DetalleRecetaViewModel
     // Alérgenos de la receta que además tiene el usuario: se resaltan en el aviso (RF14).
     public List<string> AlergenosDelUsuario { get; set; } = [];
 
-    public List<(string Nombre, string Cantidad)> Ingredientes { get; set; } = [];
+    public List<(int Id, string Nombre, string Cantidad)> Ingredientes { get; set; } = [];
     public List<string> Pasos { get; set; } = [];
     public bool EsFavorita { get; set; }
 }

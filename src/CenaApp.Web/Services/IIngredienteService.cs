@@ -17,10 +17,14 @@ public interface IIngredienteService
     // Reglas que las Data Annotations no pueden ver (nombre o sinónimo repetido, sinónimos largos).
     Task<Dictionary<string, string>> ValidarAsync(IngredienteFormularioViewModel formulario);
 
-    Task<Ingrediente> CrearAsync(IngredienteFormularioViewModel formulario);
+    // La imagen guardada del ingrediente y su tipo MIME. null si no existe o no tiene imagen (D-21).
+    Task<(byte[] Datos, string Tipo)?> ImagenAsync(int id);
+
+    // imagen: la nueva, ya validada con Imagenes.LeerAsync (null = no cambia, salvo que marque "Quitar imagen").
+    Task<Ingrediente> CrearAsync(IngredienteFormularioViewModel formulario, byte[]? imagen = null, string? imagenTipo = null);
 
     // false si el ingrediente no existe.
-    Task<bool> ActualizarAsync(int id, IngredienteFormularioViewModel formulario);
+    Task<bool> ActualizarAsync(int id, IngredienteFormularioViewModel formulario, byte[]? imagen = null, string? imagenTipo = null);
 
     // null si se borró; si no, el motivo (no existe, o se usa en recetas: VN-21).
     Task<string?> EliminarAsync(int id);

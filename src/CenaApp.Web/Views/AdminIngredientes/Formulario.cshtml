@@ -8,7 +8,9 @@
 
 <partial name="_AdminEncabezado" />
 
-<form asp-action="@(esAlta ? "Crear" : "Editar")" asp-route-id="@Model.Id" method="post" class="cuerpo" novalidate>
+@* enctype multipart: hace falta para mandar la imagen. data-confirmar: confirmación antes de guardar (D-24). *@
+<form asp-action="@(esAlta ? "Crear" : "Editar")" asp-route-id="@Model.Id" method="post" class="cuerpo" novalidate
+      enctype="multipart/form-data" data-confirmar="@(esAlta ? "¿Crear el ingrediente?" : "¿Guardar los cambios del ingrediente?")">
     <section class="tarjeta superpuesta">
         <h2 class="fs-5 mb-3">@(esAlta ? "Nuevo ingrediente" : "Editar ingrediente")</h2>
         <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
@@ -36,6 +38,25 @@
             <input asp-for="Sinonimos" class="form-control" placeholder="Separados por coma. Ej: aguacate" />
             <div class="form-text">Sirven para encontrarlo en la despensa con otro nombre.</div>
             <span asp-validation-for="Sinonimos" class="text-danger small"></span>
+        </div>
+
+        @* Imagen (D-21): la actual (o el ícono genérico) y el archivo para reemplazarla. *@
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <img id="vista-imagen" src="@(esAlta ? Url.Content("~/img/ingrediente.svg") : $"/Ingredientes/Imagen/{Model.Id}")"
+                 alt="Imagen del ingrediente" class="img-ingrediente grande" width="64" height="64" />
+            <div class="flex-grow-1">
+                <label asp-for="Imagen" class="form-label small mb-1"></label>
+                <input asp-for="Imagen" type="file" accept="image/png,image/jpeg,image/webp" class="form-control form-control-sm" data-vista-previa="vista-imagen" />
+                <span class="small text-secondary">PNG, JPG o WebP, hasta @Imagenes.TamanioMaximoKb KB. Sin imagen se muestra un ícono genérico.</span>
+                <span asp-validation-for="Imagen" class="text-danger small d-block"></span>
+                @if (!esAlta)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="QuitarImagen" class="form-check-input" />
+                        <label asp-for="QuitarImagen" class="form-check-label small"></label>
+                    </div>
+                }
+            </div>
         </div>
 
         <div class="form-check form-switch">
@@ -69,11 +90,12 @@
     </section>
 
     <div class="d-flex gap-2 mb-4">
-        <a asp-action="Index" class="btn btn-outline-primary">Cancelar</a>
+        <a asp-action="Index" class="btn btn-outline-primary" data-confirmar="¿Descartar los cambios?">Cancelar</a>
         <button type="submit" class="btn btn-primary flex-grow-1">@(esAlta ? "Crear" : "Guardar cambios")</button>
     </div>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/imagen.js" asp-append-version="true"></script>
 }

@@ -123,7 +123,7 @@ public class RecetasController : Controller
             AptaPara = RecetaService.RestriccionesAptas(receta, await _db.Restricciones.ToListAsync()),
             Ingredientes = receta.Ingredientes
                 .OrderBy(ri => ri.Ingrediente.Nombre)
-                .Select(ri => (ri.Ingrediente.Nombre, TextoCantidad(ri)))
+                .Select(ri => (ri.IngredienteId, ri.Ingrediente.Nombre, TextoCantidad(ri)))
                 .ToList(),
             Pasos = receta.Pasos.OrderBy(p => p.Orden).Select(p => p.Texto).ToList(),
             EsFavorita = (await _recetas.IdsFavoritosAsync(usuario.Id)).Contains(receta.Id),

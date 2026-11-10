@@ -86,16 +86,26 @@ public class IngredienteService : IIngredienteService
         return errores;
     }
 
-    public async Task<Ingrediente> CrearAsync(IngredienteFormularioViewModel formulario)
+    public async Task<(byte[] Datos, string Tipo)?> ImagenAsync(int id)
+    {
+        var imagen = await _db.Ingredientes
+            .Where(i => i.Id == id && i.Imagen != null)
+            .Select(i => new { i.Imagen, i.ImagenTipo })
+            .FirstOrDefaultAsync();
+        return imagen is null ? null : (imagen.Imagen!, imagen.ImagenTipo ?? "image/png");
+    }
+
+    public async Task<Ingrediente> CrearAsync(IngredienteFormularioViewModel formulario, byte[]? imagen = null, string? imagenTipo = null)
     {
         var ingrediente = new Ingrediente();
         await CopiarAsync(formulario, ingrediente);
+        CambiarImagen(ingrediente, formulario, imagen, imagenTipo);
         _db.Ingredientes.Add(ingrediente);
         await _db.SaveChangesAsync();
         return ingrediente;
     }
 
-    public async Task<bool> ActualizarAsync(int id, IngredienteFormularioViewModel formulario)
+    public async Task<bool> ActualizarAsync(int id, IngredienteFormularioViewModel formulario, byte[]? imagen = null, string? imagenTipo = null)
     {
         var ingrediente = await ObtenerAsync(id);
         if (ingrediente is null)
@@ -103,6 +113,7 @@ public class IngredienteService : IIngredienteService
             return false;
         }
         await CopiarAsync(formulario, ingrediente);
+        CambiarImagen(ingrediente, formulario, imagen, imagenTipo);
         await _db.SaveChangesAsync();
         return true;
     }
@@ -137,6 +148,21 @@ public class IngredienteService : IIngredienteService
         ingrediente.Alergenos = await _db.Alergenos.Where(a => formulario.AlergenosIds.Contains(a.Id)).ToListAsync();
         ingrediente.RestriccionesIncompatibles = await _db.Restricciones
             .Where(r => formulario.RestriccionesIncompatiblesIds.Contains(r.Id)).ToListAsync();
+    }
+
+    // Una imagen nueva reemplaza a la anterior; "Quitar imagen" la borra; si no, queda la que estaba (D-21).
+    private static void CambiarImagen(Ingrediente ingrediente, IngredienteFormularioViewModel formulario, byte[]? imagen, string? tipo)
+    {
+        if (imagen is not null)
+        {
+            ingrediente.Imagen = imagen;
+            ingrediente.ImagenTipo = tipo;
+        }
+        else if (formulario.QuitarImagen)
+        {
+            ingrediente.Imagen = null;
+            ingrediente.ImagenTipo = null;
+        }
     }
 
     // "palta,  aguacate ,," → ["palta", "aguacate"]

@@ -21,6 +21,13 @@ public class Ingrediente
     // false para básicos como sal o agua: no cuentan en el porcentaje de la despensa (VN-10).
     public bool CuentaEnDespensa { get; set; } = true;
 
+    // Imagen guardada en la base (D-21). ImagenTipo: "image/png", "image/jpeg" o "image/webp".
+    // Se muestra con /Ingredientes/Imagen/{id}; si no tiene, la vista usa el ícono de su grupo.
+    public byte[]? Imagen { get; set; }
+
+    [MaxLength(20)]
+    public string? ImagenTipo { get; set; }
+
     public List<Alergeno> Alergenos { get; set; } = [];
 
     // Restricciones con las que este ingrediente NO es compatible (ej: pollo → Vegetariana).

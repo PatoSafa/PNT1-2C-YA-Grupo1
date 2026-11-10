@@ -23,6 +23,7 @@
     @foreach (var i in Model)
     {
         <article class="tarjeta fila-admin">
+            <img src="/Ingredientes/Imagen/@i.Id" alt="" class="img-ingrediente grande" width="44" height="44" loading="lazy" />
             <div class="flex-grow-1 min-w-0">
                 <h2 class="fs-6 mb-1">@i.Nombre <span class="small text-secondary fw-normal">· @i.Grupo</span></h2>
                 @if (!string.IsNullOrEmpty(i.Sinonimos))

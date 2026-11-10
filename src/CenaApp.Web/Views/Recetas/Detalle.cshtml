@@ -56,15 +56,17 @@
         <div class="tab-content">
             <section class="tab-pane fade show active" id="ingredientes" role="tabpanel">
                 <ul class="list-unstyled">
-                    @foreach (var (nombre, cantidad) in Model.Ingredientes)
+                    @foreach (var (id, nombre, cantidad) in Model.Ingredientes)
                     {
                         <li class="fila-ingrediente">
-                            <span>@nombre</span>
+                            <span><partial name="_ImagenIngrediente" model="id" /> @nombre</span>
                             <span class="small text-secondary fw-medium">@cantidad</span>
                         </li>
                     }
                 </ul>
-                <a asp-controller="Tiendas" asp-action="Index" class="btn btn-success w-100">
+                @* Lleva a Tiendas filtrando por los ingredientes de esta receta (D-20). *@
+                <a asp-controller="Tiendas" asp-action="Index" asp-route-ingredientes="@string.Join(",", Model.Ingredientes.Select(i => i.Id))"
+                   class="btn btn-success w-100">
                     <i class="bi bi-cart"></i> Ver dónde comprar
                 </a>
             </section>

@@ -878,6 +878,25 @@ h1, h2, h3, h4 {
     border-width: 2px;
 }
 
+/* Imagen de ingrediente (D-21) */
+.img-ingrediente {
+    width: 1.75rem;
+    height: 1.75rem;
+    object-fit: contain;
+    vertical-align: middle;
+}
+
+.img-ingrediente.grande {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+}
+
+#vista-imagen {
+    width: 4rem;
+    height: 4rem;
+}
+
 /* ---------- 19. Administración ---------- */
 .pestanas-admin {
     display: flex;

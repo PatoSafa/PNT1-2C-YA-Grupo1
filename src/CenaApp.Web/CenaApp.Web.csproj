@@ -18,4 +18,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Íconos de los ingredientes que cargan los datos iniciales (D-21): se copian junto a la app compilada -->
+    <None Update="Data\Imagenes\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
