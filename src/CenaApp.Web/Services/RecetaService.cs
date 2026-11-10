@@ -205,6 +205,34 @@ public class RecetaService : IRecetaService
             usuario.Nivel);
     }
 
+    // ---------- Sugerencias según los favoritos (D-26) ----------
+
+    public async Task<List<Sugerencia>> SugerenciasAsync(int usuarioId, int cantidad = 4)
+    {
+        var usuario = await _db.Usuarios
+            .Include(u => u.Restricciones)
+            .Include(u => u.Alergenos)
+            .Include(u => u.Gustos)
+            .Include(u => u.Favoritos)
+            .AsSplitQuery()
+            .FirstAsync(u => u.Id == usuarioId);
+        if (usuario.Favoritos.Count == 0)
+        {
+            return [];
+        }
+
+        var recetas = await ConIngredientesYGustos(_db.Recetas).ToListAsync();
+        var idsFavoritas = usuario.Favoritos.Select(f => f.Id).ToHashSet();
+
+        // Las candidatas salen de la misma lista filtrada del Inicio: respetan restricciones, alergias y nivel.
+        var aptas = FiltrarYOrdenar(recetas,
+            usuario.Restricciones.Select(r => r.Id).ToList(),
+            usuario.Alergenos.Select(a => a.Id).ToList(),
+            usuario.Gustos.Select(g => g.Id).ToList(),
+            usuario.Nivel);
+        return Sugerir(aptas, recetas.Where(r => idsFavoritas.Contains(r.Id)).ToList(), cantidad);
+    }
+
     // ---------- Favoritos (RF12) ----------
 
     public async Task<bool?> AlternarFavoritoAsync(int usuarioId, int recetaId)
@@ -317,6 +345,39 @@ public class RecetaService : IRecetaService
         Nivel.Avanzado => (int)Dificultad.Dificil - (int)receta.Dificultad,
         _ => 0,
     };
+
+    // Cuánto se parecen dos recetas: 2 puntos por gusto en común, 1 por ser de la misma categoría
+    // y 1 por cada ingrediente en común (sin contar básicos como sal o aceite).
+    public static int Parecido(Receta a, Receta b)
+    {
+        var gustos = a.Gustos.Count(g => b.Gustos.Any(o => o.Id == g.Id));
+        var categoria = a.CategoriaId == b.CategoriaId ? 1 : 0;
+        var ingredientes = a.Ingredientes.Count(ri => ri.Ingrediente.CuentaEnDespensa
+            && b.Ingredientes.Any(o => o.IngredienteId == ri.IngredienteId));
+        return gustos * 2 + categoria + ingredientes;
+    }
+
+    // "Te puede gustar" (D-26): de las candidatas (ya filtradas para el usuario), las que no son favoritas,
+    // ordenadas por cuánto se parecen a sus favoritas en total. Cada una dice a qué favorita se parece más.
+    public static List<Sugerencia> Sugerir(IEnumerable<Receta> candidatas, List<Receta> favoritas, int cantidad)
+    {
+        if (favoritas.Count == 0)
+        {
+            return [];
+        }
+        return candidatas
+            .Where(r => favoritas.All(f => f.Id != r.Id))
+            .Select(r =>
+            {
+                var masParecida = favoritas.MaxBy(f => Parecido(r, f))!;
+                return new Sugerencia(r, favoritas.Sum(f => Parecido(r, f)), masParecida.Nombre);
+            })
+            .Where(s => s.Puntaje > 0)
+            .OrderByDescending(s => s.Puntaje)
+            .ThenBy(s => s.Receta.Nombre)
+            .Take(cantidad)
+            .ToList();
+    }
 
     // Lo que ve el usuario en el Inicio: sin sus alérgenos, aptas para todas sus restricciones y para su nivel,
     // primero las que más coinciden con sus gustos, después según su nivel y, al final, por nombre.

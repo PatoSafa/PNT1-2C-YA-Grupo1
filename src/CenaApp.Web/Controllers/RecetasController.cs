@@ -36,6 +36,10 @@ public class RecetasController : Controller
         var gustos = await _db.Gustos.OrderBy(g => g.Tipo).ThenBy(g => g.Nombre).ToListAsync();
         var recetas = await _recetas.ListarParaUsuarioAsync(usuarioId, buscar, gusto);
         var favoritos = await _recetas.IdsFavoritosAsync(usuarioId);
+        // Las sugerencias se muestran solo en el Inicio sin búsqueda ni filtro.
+        var sugerencias = string.IsNullOrWhiteSpace(buscar) && gusto is null
+            ? await _recetas.SugerenciasAsync(usuarioId)
+            : [];
 
         var modelo = new InicioRecetasViewModel
         {
@@ -44,17 +48,8 @@ public class RecetasController : Controller
             GustoId = gusto,
             GustoElegido = gustos.FirstOrDefault(g => g.Id == gusto)?.Nombre,
             Gustos = gustos,
-            Recetas = recetas.Select(r => new TarjetaRecetaViewModel
-            {
-                Id = r.Id,
-                Nombre = r.Nombre,
-                Descripcion = r.Descripcion,
-                Emoji = r.Emoji,
-                TiempoMin = r.TiempoMin,
-                Porciones = r.Porciones,
-                Dificultad = r.Dificultad,
-                EsFavorita = favoritos.Contains(r.Id),
-            }).ToList(),
+            Recetas = recetas.Select(r => ATarjeta(r, favoritos)).ToList(),
+            Sugerencias = sugerencias.Select(s => (ATarjeta(s.Receta, favoritos), s.ParecidaA)).ToList(),
         };
         return View(modelo);
     }
@@ -141,4 +136,16 @@ public class RecetasController : Controller
         var numero = ri.Cantidad.Value.ToString("0.##", CultureInfo.GetCultureInfo("es-AR"));
         return string.IsNullOrEmpty(ri.Unidad) ? numero : $"{numero} {ri.Unidad}";
     }
+
+    private static TarjetaRecetaViewModel ATarjeta(Models.Receta r, HashSet<int> favoritos) => new()
+    {
+        Id = r.Id,
+        Nombre = r.Nombre,
+        Descripcion = r.Descripcion,
+        Emoji = r.Emoji,
+        TiempoMin = r.TiempoMin,
+        Porciones = r.Porciones,
+        Dificultad = r.Dificultad,
+        EsFavorita = favoritos.Contains(r.Id),
+    };
 }

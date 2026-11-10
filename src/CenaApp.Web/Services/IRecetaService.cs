@@ -36,4 +36,10 @@ public interface IRecetaService
     Task<HashSet<int>> IdsFavoritosAsync(int usuarioId);
 
     Task<List<Receta>> ListarFavoritosAsync(int usuarioId);
+
+    // "Te puede gustar" (D-26): recetas aptas para el usuario que se parecen a sus favoritas. Vacía si no tiene favoritas.
+    Task<List<Sugerencia>> SugerenciasAsync(int usuarioId, int cantidad = 4);
 }
+
+// Una receta sugerida, con su puntaje de parecido y la favorita a la que más se parece.
+public record Sugerencia(Receta Receta, int Puntaje, string ParecidaA);

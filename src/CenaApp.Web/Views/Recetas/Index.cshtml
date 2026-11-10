@@ -37,6 +37,25 @@
         </div>
     </section>
 
+    @* "Te puede gustar" (D-26): parecidas a las favoritas, siempre dentro de lo apto para el perfil. *@
+    @if (Model.Sugerencias.Count > 0)
+    {
+        <section class="mb-4" aria-labelledby="titulo-sugerencias">
+            <h2 class="fs-5 mb-1" id="titulo-sugerencias"><i class="bi bi-stars text-warning"></i> Te puede gustar</h2>
+            <p class="small text-secondary mb-2">Parecidas a tus favoritas y aptas para tu perfil.</p>
+            <div class="sugerencias">
+                @foreach (var (receta, parecidaA) in Model.Sugerencias)
+                {
+                    <a asp-action="Detalle" asp-route-id="@receta.Id" class="tarjeta-sugerencia">
+                        <span class="emoji" aria-hidden="true">@receta.Emoji</span>
+                        <span class="fw-medium">@receta.Nombre</span>
+                        <span class="small text-secondary">Como @parecidaA</span>
+                    </a>
+                }
+            </div>
+        </section>
+    }
+
     <div class="d-flex justify-content-between align-items-baseline mb-3">
         <h2 class="fs-5 mb-0">@(Model.GustoElegido is null ? "Recetas para vos" : $"Recetas {Model.GustoElegido}")</h2>
         <span class="small text-secondary">@Model.Recetas.Count recetas</span>

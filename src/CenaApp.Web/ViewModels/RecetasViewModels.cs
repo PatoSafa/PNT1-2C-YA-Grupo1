@@ -25,6 +25,8 @@ public class InicioRecetasViewModel
     public string? GustoElegido { get; set; }
     public List<Gusto> Gustos { get; set; } = [];
     public List<TarjetaRecetaViewModel> Recetas { get; set; } = [];
+    // "Te puede gustar": (receta, favorita a la que se parece). Solo sin filtros.
+    public List<(TarjetaRecetaViewModel Receta, string ParecidaA)> Sugerencias { get; set; } = [];
 }
 
 // Pantalla de detalle de una receta.

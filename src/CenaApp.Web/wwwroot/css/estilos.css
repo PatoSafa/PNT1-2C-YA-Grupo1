@@ -878,6 +878,34 @@ h1, h2, h3, h4 {
     border-width: 2px;
 }
 
+/* "Te puede gustar": tarjetas chicas que se deslizan de costado */
+.sugerencias {
+    display: flex;
+    gap: .75rem;
+    overflow-x: auto;
+    padding-bottom: .5rem;
+    scroll-snap-type: x mandatory;
+}
+
+.tarjeta-sugerencia {
+    flex: 0 0 9.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    padding: .75rem;
+    border-radius: var(--radio);
+    background: #fff;
+    box-shadow: var(--sombra-media);
+    color: var(--color-texto);
+    text-decoration: none;
+    scroll-snap-align: start;
+    line-height: 1.25;
+}
+
+.tarjeta-sugerencia .emoji {
+    font-size: 2rem;
+}
+
 /* Imagen de ingrediente (D-21) */
 .img-ingrediente {
     width: 1.75rem;
