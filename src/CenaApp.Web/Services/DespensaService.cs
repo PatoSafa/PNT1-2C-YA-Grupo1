@@ -19,12 +19,12 @@ public class DespensaService : IDespensaService
         _db = db;
     }
 
-    public async Task<List<Ingrediente>> ObtenerAsync(int usuarioId)
+    public async Task<List<DespensaItem>> ObtenerAsync(int usuarioId)
     {
-        return await _db.Usuarios
-            .Where(u => u.Id == usuarioId)
-            .SelectMany(u => u.Despensa)
-            .OrderBy(i => i.Nombre)
+        return await _db.Despensa
+            .Where(d => d.UsuarioId == usuarioId)
+            .Include(d => d.Ingrediente)
+            .OrderBy(d => d.Ingrediente.Nombre)
             .ToListAsync();
     }
 
@@ -33,58 +33,105 @@ public class DespensaService : IDespensaService
         return await _db.Ingredientes.OrderBy(i => i.Nombre).ToListAsync();
     }
 
-    public async Task<string?> AgregarAsync(int usuarioId, string texto)
+    public async Task<Dictionary<int, List<string>>> UnidadesAsync()
+    {
+        var usadas = await _db.RecetaIngredientes
+            .Where(ri => ri.Unidad != null)
+            .Select(ri => new { ri.IngredienteId, ri.Unidad })
+            .Distinct()
+            .ToListAsync();
+        return usadas
+            .GroupBy(u => u.IngredienteId)
+            .ToDictionary(g => g.Key, g => g.Select(u => u.Unidad!).Order().ToList());
+    }
+
+    public async Task<ResultadoOperacion> AgregarAsync(int usuarioId, string texto, decimal? cantidad = null, string? unidad = null)
     {
         if (string.IsNullOrWhiteSpace(texto))
         {
-            return "Escribí un ingrediente.";
+            return new(false, "Escribí un ingrediente.");
+        }
+        if (cantidad is <= 0)
+        {
+            return new(false, "La cantidad tiene que ser mayor a 0 (o dejala vacía).");
         }
 
         var ingrediente = Buscar(await CatalogoAsync(), texto);
         if (ingrediente is null)
         {
-            return $"\"{texto.Trim()}\" no está en el catálogo de ingredientes.";
+            return new(false, $"\"{texto.Trim()}\" no está en el catálogo de ingredientes.");
         }
 
-        var usuario = await _db.Usuarios.Include(u => u.Despensa).FirstAsync(u => u.Id == usuarioId);
-        if (usuario.Despensa.Any(i => i.Id == ingrediente.Id))
+        unidad = cantidad is null || string.IsNullOrWhiteSpace(unidad) ? null : unidad.Trim();
+        var existente = await _db.Despensa.FindAsync(usuarioId, ingrediente.Id);
+        if (existente is null)
         {
-            return $"{ingrediente.Nombre} ya está en tu despensa.";
+            _db.Despensa.Add(new DespensaItem { UsuarioId = usuarioId, IngredienteId = ingrediente.Id, Cantidad = cantidad, Unidad = unidad });
+            await _db.SaveChangesAsync();
+            return new(true, $"{ingrediente.Nombre} agregado a tu despensa.");
         }
 
-        usuario.Despensa.Add(ingrediente);
+        // VAL-12: sin cantidad no tiene sentido agregarlo dos veces.
+        if (cantidad is null)
+        {
+            return new(false, $"{ingrediente.Nombre} ya está en tu despensa.");
+        }
+
+        // Ya estaba: con cantidad en la misma unidad se suma (ej: compró lo que le faltaba); si no tenía
+        // cantidad o estaba en otra unidad, queda la nueva.
+        existente.Cantidad = existente.Cantidad is not null && existente.Unidad == unidad
+            ? existente.Cantidad + cantidad
+            : cantidad;
+        existente.Unidad = unidad;
         await _db.SaveChangesAsync();
-        return null;
+        return new(true, $"Sumaste {ingrediente.Nombre} a tu despensa.");
     }
 
-    public async Task QuitarAsync(int usuarioId, int ingredienteId)
+    public async Task<ResultadoOperacion> CambiarCantidadAsync(int usuarioId, int ingredienteId, decimal? cantidad, string? unidad)
     {
-        var usuario = await _db.Usuarios.Include(u => u.Despensa).FirstAsync(u => u.Id == usuarioId);
-        usuario.Despensa.RemoveAll(i => i.Id == ingredienteId);
+        if (cantidad is <= 0)
+        {
+            return new(false, "La cantidad tiene que ser mayor a 0 (o dejala vacía).");
+        }
+        var item = await BuscarItemAsync(usuarioId, ingredienteId);
+        if (item is null)
+        {
+            return new(false, "Ese ingrediente ya no está en tu despensa.");
+        }
+
+        item.Cantidad = cantidad;
+        item.Unidad = cantidad is null || string.IsNullOrWhiteSpace(unidad) ? null : unidad.Trim();
         await _db.SaveChangesAsync();
+        return new(true, $"Guardaste la cantidad de {item.Ingrediente.Nombre}.");
     }
 
-    public async Task VaciarAsync(int usuarioId)
+    public async Task<ResultadoOperacion> QuitarAsync(int usuarioId, int ingredienteId)
     {
-        var usuario = await _db.Usuarios.Include(u => u.Despensa).FirstAsync(u => u.Id == usuarioId);
-        usuario.Despensa.Clear();
+        var item = await BuscarItemAsync(usuarioId, ingredienteId);
+        if (item is null)
+        {
+            return new(false, "Ese ingrediente ya no está en tu despensa.");
+        }
+        _db.Despensa.Remove(item);
         await _db.SaveChangesAsync();
+        return new(true, $"Quitaste {item.Ingrediente.Nombre} de tu despensa.");
+    }
+
+    public async Task<ResultadoOperacion> VaciarAsync(int usuarioId)
+    {
+        await _db.Despensa.Where(d => d.UsuarioId == usuarioId).ExecuteDeleteAsync();
+        return new(true, "Vaciaste tu despensa.");
     }
 
     public async Task<ResultadoDespensa> SugerenciasAsync(int usuarioId)
     {
         var usuario = await _db.Usuarios
-            .Include(u => u.Despensa)
             .Include(u => u.Restricciones)
             .Include(u => u.Alergenos)
             .AsSplitQuery()
             .FirstAsync(u => u.Id == usuarioId);
 
-        var recetas = await _db.Recetas
-            .Include(r => r.Ingredientes).ThenInclude(ri => ri.Ingrediente).ThenInclude(i => i.Alergenos)
-            .Include(r => r.Ingredientes).ThenInclude(ri => ri.Ingrediente).ThenInclude(i => i.RestriccionesIncompatibles)
-            .AsSplitQuery()
-            .ToListAsync();
+        var recetas = await ConIngredientes(_db.Recetas).ToListAsync();
 
         // Las mismas reglas que el Inicio: no se sugiere nada que el usuario no pueda comer.
         var aptas = RecetaService.FiltrarYOrdenar(recetas,
@@ -92,19 +139,57 @@ public class DespensaService : IDespensaService
             usuario.Alergenos.Select(a => a.Id).ToList(),
             []);
 
-        return Clasificar(aptas, usuario.Despensa.Select(i => i.Id).ToHashSet());
+        return Clasificar(aptas, await ObtenerAsync(usuarioId));
     }
+
+    public async Task<AnalisisReceta?> AnalizarRecetaAsync(int usuarioId, int recetaId)
+    {
+        var receta = await ConIngredientes(_db.Recetas).FirstOrDefaultAsync(r => r.Id == recetaId);
+        return receta is null ? null : Analizar(receta, await ObtenerAsync(usuarioId));
+    }
+
+    private Task<DespensaItem?> BuscarItemAsync(int usuarioId, int ingredienteId) =>
+        _db.Despensa.Include(d => d.Ingrediente)
+            .FirstOrDefaultAsync(d => d.UsuarioId == usuarioId && d.IngredienteId == ingredienteId);
+
+    private static IQueryable<Receta> ConIngredientes(IQueryable<Receta> recetas) =>
+        recetas
+            .Include(r => r.Ingredientes).ThenInclude(ri => ri.Ingrediente).ThenInclude(i => i.Alergenos)
+            .Include(r => r.Ingredientes).ThenInclude(ri => ri.Ingrediente).ThenInclude(i => i.RestriccionesIncompatibles)
+            .AsSplitQuery();
 
     // ---------------------------------------------------------------------------------------------
     // Reglas de la despensa. Funciones puras (sin base de datos), con tests en CenaApp.Tests.
     // ---------------------------------------------------------------------------------------------
 
-    // Porcentaje de ingredientes que el usuario tiene, sin contar los básicos como sal o agua (VN-10),
-    // y la lista de los que faltan. Una receta hecha solo de básicos cuenta como 100 %.
-    public static AnalisisReceta Analizar(Receta receta, ICollection<int> despensaIds)
+    // Qué falta comprar de un ingrediente de la receta según lo que hay en casa (D-19). null = alcanza.
+    // - No está en la despensa → falta todo lo que pide la receta.
+    // - Está sin cantidad, la receta dice "a gusto" o está en otra unidad → alcanza.
+    // - Está con cantidad en la misma unidad → falta la diferencia, si la hay.
+    public static Faltante? CalcularFaltante(RecetaIngrediente necesario, DespensaItem? enCasa)
     {
+        if (enCasa is null)
+        {
+            return new Faltante(necesario.Ingrediente, necesario.Cantidad, necesario.Unidad, null);
+        }
+        if (enCasa.Cantidad is null || necesario.Cantidad is null || enCasa.Unidad != necesario.Unidad)
+        {
+            return null;
+        }
+        var falta = necesario.Cantidad.Value - enCasa.Cantidad.Value;
+        return falta > 0 ? new Faltante(necesario.Ingrediente, falta, necesario.Unidad, enCasa.Cantidad) : null;
+    }
+
+    // Porcentaje de ingredientes que alcanzan, sin contar los básicos como sal o agua (VN-10),
+    // y la lista de lo que falta comprar. Una receta hecha solo de básicos cuenta como 100 %.
+    public static AnalisisReceta Analizar(Receta receta, IEnumerable<DespensaItem> despensa)
+    {
+        var enCasa = despensa.ToDictionary(d => d.IngredienteId);
         var queCuentan = receta.Ingredientes.Where(ri => ri.Ingrediente.CuentaEnDespensa).ToList();
-        var faltantes = queCuentan.Where(ri => !despensaIds.Contains(ri.IngredienteId)).ToList();
+        var faltantes = queCuentan
+            .Select(ri => CalcularFaltante(ri, enCasa.GetValueOrDefault(ri.IngredienteId)))
+            .OfType<Faltante>()
+            .ToList();
 
         var porcentaje = queCuentan.Count == 0
             ? 100
@@ -114,9 +199,10 @@ public class DespensaService : IDespensaService
     }
 
     // 100 % → "Podés cocinar", por nombre. 50–99 % → "Casi listas", de mayor a menor porcentaje (VN-11 a VN-13).
-    public static ResultadoDespensa Clasificar(IEnumerable<Receta> recetas, ICollection<int> despensaIds)
+    public static ResultadoDespensa Clasificar(IEnumerable<Receta> recetas, IEnumerable<DespensaItem> despensa)
     {
-        var analisis = recetas.Select(r => Analizar(r, despensaIds)).ToList();
+        var items = despensa.ToList();
+        var analisis = recetas.Select(r => Analizar(r, items)).ToList();
 
         var podesCocinar = analisis
             .Where(a => a.Porcentaje == 100)

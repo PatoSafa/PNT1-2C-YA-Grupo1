@@ -61,6 +61,29 @@ namespace CenaApp.Web.Data.Migrations
                     b.ToTable("Categorias");
                 });
 
+            modelBuilder.Entity("CenaApp.Web.Models.DespensaItem", b =>
+                {
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IngredienteId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Cantidad")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("numeric(8,2)");
+
+                    b.Property<string>("Unidad")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("UsuarioId", "IngredienteId");
+
+                    b.HasIndex("IngredienteId");
+
+                    b.ToTable("Despensa", (string)null);
+                });
+
             modelBuilder.Entity("CenaApp.Web.Models.Gusto", b =>
                 {
                     b.Property<int>("Id")
@@ -280,21 +303,6 @@ namespace CenaApp.Web.Data.Migrations
                     b.ToTable("Usuarios");
                 });
 
-            modelBuilder.Entity("Despensa", b =>
-                {
-                    b.Property<int>("IngredienteId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("IngredienteId", "UsuarioId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Despensa");
-                });
-
             modelBuilder.Entity("Favoritos", b =>
                 {
                     b.Property<int>("RecetaId")
@@ -400,6 +408,23 @@ namespace CenaApp.Web.Data.Migrations
                     b.ToTable("UsuarioRestricciones");
                 });
 
+            modelBuilder.Entity("CenaApp.Web.Models.DespensaItem", b =>
+                {
+                    b.HasOne("CenaApp.Web.Models.Ingrediente", "Ingrediente")
+                        .WithMany()
+                        .HasForeignKey("IngredienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CenaApp.Web.Models.Usuario", null)
+                        .WithMany("Despensa")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ingrediente");
+                });
+
             modelBuilder.Entity("CenaApp.Web.Models.Paso", b =>
                 {
                     b.HasOne("CenaApp.Web.Models.Receta", null)
@@ -437,21 +462,6 @@ namespace CenaApp.Web.Data.Migrations
                     b.Navigation("Ingrediente");
 
                     b.Navigation("Receta");
-                });
-
-            modelBuilder.Entity("Despensa", b =>
-                {
-                    b.HasOne("CenaApp.Web.Models.Ingrediente", null)
-                        .WithMany()
-                        .HasForeignKey("IngredienteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CenaApp.Web.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Favoritos", b =>
@@ -564,6 +574,11 @@ namespace CenaApp.Web.Data.Migrations
                     b.Navigation("Ingredientes");
 
                     b.Navigation("Pasos");
+                });
+
+            modelBuilder.Entity("CenaApp.Web.Models.Usuario", b =>
+                {
+                    b.Navigation("Despensa");
                 });
 #pragma warning restore 612, 618
         }

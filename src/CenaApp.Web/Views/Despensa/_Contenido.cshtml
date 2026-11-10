@@ -1,13 +1,22 @@
-@* Parte de la Despensa que cambia al agregar o quitar: ingredientes en casa, accesos rápidos y recetas sugeridas.
-   La devuelven Agregar / Quitar / Vaciar para que js/despensa.js la reemplace sin recargar. *@
+@* Parte de la Despensa que cambia con cada acción: aviso, accesos rápidos, tabla "Tengo en casa", la favorita elegida
+   y las recetas sugeridas. La devuelven Agregar / Cambiar / Quitar / Vaciar / Contenido para que js/despensa.js
+   la reemplace sin recargar. *@
+@using System.Globalization
 @model CenaApp.Web.ViewModels.DespensaContenidoViewModel
+@{
+    var ar = CultureInfo.GetCultureInfo("es-AR");
+    // Los <input type="number"> esperan punto decimal.
+    string ParaInput(decimal? valor) => valor?.ToString("0.##", CultureInfo.InvariantCulture) ?? "";
+}
 
 @* Token antiforgery que usan los fetch de esta pantalla (se renueva con cada respuesta). *@
 @Html.AntiForgeryToken()
 
 @if (Model.Mensaje is not null)
 {
-    <div class="alert alert-warning py-2" role="alert">@Model.Mensaje</div>
+    <div class="alert @(Model.MensajeOk ? "alert-success" : "alert-warning") py-2 aviso-temporal" role="status">
+        <i class="bi @(Model.MensajeOk ? "bi-check-circle" : "bi-exclamation-circle")"></i> @Model.Mensaje
+    </div>
 }
 
 @if (Model.Rapidos.Count > 0)
@@ -28,7 +37,7 @@
         <h2 class="fs-6 mb-0">Tengo en casa (@Model.Ingredientes.Count)</h2>
         @if (Model.Ingredientes.Count > 0)
         {
-            <form asp-action="Vaciar" method="post" class="form-despensa" data-confirmar="¿Vaciar toda la despensa?">
+            <form asp-action="Vaciar" method="post" class="form-despensa" data-confirmar="¿Vaciar toda la despensa? Se van a quitar los @Model.Ingredientes.Count ingredientes.">
                 <button type="submit" class="btn btn-link btn-sm text-danger p-0">Limpiar todo</button>
             </form>
         }
@@ -44,19 +53,71 @@
     }
     else
     {
-        <div class="chips">
-            @foreach (var i in Model.Ingredientes)
-            {
-                <form asp-action="Quitar" asp-route-id="@i.Id" method="post" class="form-despensa">
-                    <span class="etiqueta etiqueta-despensa">
-                        @i.Nombre
-                        <button type="submit" aria-label="Quitar @i.Nombre"><i class="bi bi-x"></i></button>
-                    </span>
-                </form>
-            }
-        </div>
+        <p class="small text-secondary mb-2">La cantidad es opcional: si la dejás vacía, contamos que te alcanza para cualquier receta.</p>
+        <table class="table table-sm align-middle tabla-despensa mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Ingrediente</th>
+                    <th scope="col">Cantidad</th>
+                    <th scope="col"><span class="visually-hidden">Quitar</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var i in Model.Ingredientes)
+                {
+                    <tr>
+                        <td class="fw-medium">@i.Nombre</td>
+                        <td>
+                            @* Se guarda solo al tocar ✓ (o Enter). *@
+                            <form asp-action="Cambiar" asp-route-id="@i.IngredienteId" method="post" class="form-despensa d-flex gap-1">
+                                <input type="number" name="cantidad" value="@ParaInput(i.Cantidad)" min="0.01" step="any"
+                                       class="form-control form-control-sm cantidad" placeholder="—" aria-label="Cantidad de @i.Nombre" />
+                                <select name="unidad" class="form-select form-select-sm unidad" aria-label="Unidad de @i.Nombre">
+                                    @foreach (var u in i.Unidades)
+                                    {
+                                        <option value="@u" selected="@(u == i.Unidad)">@u</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-success" aria-label="Guardar cantidad de @i.Nombre" title="Guardar cantidad">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td class="text-end">
+                            <form asp-action="Quitar" asp-route-id="@i.IngredienteId" method="post" class="form-despensa"
+                                  data-confirmar="¿Quitar @i.Nombre de tu despensa?">
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" aria-label="Quitar @i.Nombre" title="Quitar">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     }
 </section>
+
+@* "¿Qué me falta para...?": cualquiera de las favoritas, aunque no llegue al 50 %. *@
+@if (Model.Favoritas.Count > 0)
+{
+    <section class="tarjeta">
+        <label for="favorita" class="fs-6 fw-medium mb-2 d-block"><i class="bi bi-heart-fill text-danger"></i> ¿Qué me falta para una favorita?</label>
+        <select id="favorita" name="favorita" class="form-select">
+            <option value="">Elegí una receta favorita…</option>
+            @foreach (var (id, nombre) in Model.Favoritas)
+            {
+                <option value="@id" selected="@(id == Model.FavoritaElegida)">@nombre</option>
+            }
+        </select>
+        @if (Model.AnalisisFavorita is { } f)
+        {
+            <div class="mt-3">
+                <partial name="_RecetaParcial" model="f" />
+            </div>
+        }
+    </section>
+}
 
 @if (Model.Ingredientes.Count > 0)
 {
@@ -103,30 +164,7 @@
             }
             @foreach (var r in Model.CasiListas)
             {
-                <div class="tarjeta-despensa parcial">
-                    <a asp-controller="Recetas" asp-action="Detalle" asp-route-id="@r.Id" class="d-flex gap-3 align-items-center text-reset text-decoration-none">
-                        <span class="emoji">@r.Emoji</span>
-                        <span class="flex-grow-1">
-                            <span class="d-flex justify-content-between">
-                                <span class="fw-medium">@r.Nombre</span>
-                                <span class="small fw-medium text-warning-emphasis">@r.Porcentaje%</span>
-                            </span>
-                            <span class="barra-progreso d-block mt-2"><span class="d-block" style="width: @r.Porcentaje%"></span></span>
-                        </span>
-                    </a>
-                    <div class="faltantes">
-                        <div class="d-flex justify-content-between small mb-2">
-                            <span><i class="bi bi-cart"></i> Necesitás comprar (@r.Faltantes.Count):</span>
-                            <a asp-controller="Tiendas" asp-action="Index">Ver tiendas →</a>
-                        </div>
-                        <div class="d-flex flex-wrap gap-1">
-                            @foreach (var f in r.Faltantes)
-                            {
-                                <span class="etiqueta-faltante">@f</span>
-                            }
-                        </div>
-                    </div>
-                </div>
+                <partial name="_RecetaParcial" model="r" />
             }
         </section>
     </div>

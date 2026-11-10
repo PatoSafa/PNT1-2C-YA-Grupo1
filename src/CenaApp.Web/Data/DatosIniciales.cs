@@ -470,8 +470,19 @@ public static class DatosIniciales
                 Restricciones = db.Restricciones.Where(r => r.Nombre == "Vegetariana").ToList(),
                 Alergenos = db.Alergenos.Where(a => a.Nombre == "Frutos secos").ToList(),
                 Gustos = db.Gustos.Where(g => g.Nombre == "Italiana" || g.Nombre == "Saludable" || g.Nombre == "Rápido").ToList(),
+                // Algunos con cantidad y otros sin (sin cantidad = alcanza para cualquier receta, D-19).
                 Despensa = db.Ingredientes
                     .Where(i => new[] { "Papa", "Huevo", "Cebolla", "Tomate", "Arroz", "Zanahoria", "Limón", "Garbanzos" }.Contains(i.Nombre))
+                    .ToList()
+                    .Select(i => i.Nombre switch
+                    {
+                        "Papa" => new DespensaItem { Ingrediente = i, Cantidad = 1000, Unidad = "g" },
+                        "Huevo" => new DespensaItem { Ingrediente = i, Cantidad = 2, Unidad = "ud" },
+                        "Arroz" => new DespensaItem { Ingrediente = i, Cantidad = 500, Unidad = "g" },
+                        // No alcanza para el curry de garbanzos (pide 120 g): aparece como faltante parcial.
+                        "Garbanzos" => new DespensaItem { Ingrediente = i, Cantidad = 100, Unidad = "g" },
+                        _ => new DespensaItem { Ingrediente = i },
+                    })
                     .ToList(),
             };
             demo.PasswordHash = hasher.HashPassword(demo, claveDemo);

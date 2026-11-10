@@ -14,18 +14,27 @@
     <section class="tarjeta superpuesta">
         <h2 class="fs-6 mb-3"><i class="bi bi-plus-circle text-success"></i> Agregar ingrediente</h2>
         @* Formulario de la Parte 15: input + botón + fetch (js/despensa.js). Sin JavaScript, se envía normal. *@
-        <form id="form-agregar" asp-action="Agregar" method="post" class="d-flex gap-2" autocomplete="off">
-            <div class="buscador flex-grow-1">
-                <i class="bi bi-search"></i>
-                <input name="texto" class="form-control borde" list="catalogo-ingredientes" placeholder="Escribí o elegí de la lista..." aria-label="Ingrediente" required />
+        <form id="form-agregar" asp-action="Agregar" method="post" autocomplete="off">
+            <div class="d-flex gap-2">
+                <div class="buscador flex-grow-1">
+                    <i class="bi bi-search"></i>
+                    <input id="texto" name="texto" class="form-control borde" list="catalogo-ingredientes" placeholder="Escribí o elegí de la lista..." aria-label="Ingrediente" required />
+                </div>
+                <button type="submit" class="btn btn-despensa" aria-label="Agregar"><i class="bi bi-plus-lg"></i></button>
             </div>
-            <button type="submit" class="btn btn-despensa" aria-label="Agregar"><i class="bi bi-plus-lg"></i></button>
+            @* Cantidad opcional (D-19). Las unidades son las que usan las recetas para ese ingrediente (las completa despensa.js). *@
+            <div class="d-flex gap-2 mt-2 align-items-center">
+                <input type="number" name="cantidad" min="0.01" step="any" class="form-control form-control-sm" placeholder="Cantidad (opcional)" aria-label="Cantidad" />
+                <select id="unidad" name="unidad" class="form-select form-select-sm w-auto" aria-label="Unidad">
+                    <option>g</option><option>ml</option><option>ud</option>
+                </select>
+            </div>
         </form>
-        @* Sugerencias del navegador: nombre del ingrediente, con sus sinónimos como ayuda. *@
+        @* Sugerencias del navegador: nombre del ingrediente, con sus sinónimos como ayuda y sus unidades. *@
         <datalist id="catalogo-ingredientes">
-            @foreach (var (nombre, sinonimos) in Model.Catalogo)
+            @foreach (var i in Model.Catalogo)
             {
-                <option value="@nombre">@sinonimos</option>
+                <option value="@i.Nombre" data-unidades="@string.Join(",", i.Unidades)">@i.Sinonimos</option>
             }
         </datalist>
     </section>

@@ -30,6 +30,6 @@ public class Usuario
     public List<Gusto> Gustos { get; set; } = [];
 
     // Listas del usuario
-    public List<Ingrediente> Despensa { get; set; } = [];
+    public List<DespensaItem> Despensa { get; set; } = [];
     public List<Receta> Favoritos { get; set; } = [];
 }

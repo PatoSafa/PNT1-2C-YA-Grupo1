@@ -1,0 +1,48 @@
+@* Receta a la que le falta algo: porcentaje, lo que hay que comprar (cada uno con "+" para sumarlo a la despensa)
+   y "Ver tiendas" que lleva a los comercios que venden esos ingredientes. Se usa en "Casi listas" y en la favorita elegida. *@
+@using System.Globalization
+@model CenaApp.Web.ViewModels.RecetaDespensaViewModel
+
+<div class="tarjeta-despensa @(Model.Porcentaje == 100 ? "completa" : "parcial")">
+    <a asp-controller="Recetas" asp-action="Detalle" asp-route-id="@Model.Id" class="d-flex gap-3 align-items-center text-reset text-decoration-none">
+        <span class="emoji">@Model.Emoji</span>
+        <span class="flex-grow-1">
+            <span class="d-flex justify-content-between">
+                <span class="fw-medium">@Model.Nombre</span>
+                <span class="small fw-medium text-warning-emphasis">@Model.Porcentaje%</span>
+            </span>
+            <span class="barra-progreso d-block mt-2"><span class="d-block" style="width: @Model.Porcentaje%"></span></span>
+        </span>
+    </a>
+    @if (Model.Faltantes.Count == 0)
+    {
+        <p class="small text-success mt-2 mb-0"><i class="bi bi-check-circle"></i> Tenés todo lo necesario.</p>
+    }
+    else
+    {
+        <div class="faltantes">
+            <div class="d-flex justify-content-between small mb-2">
+                <span><i class="bi bi-cart"></i> Necesitás comprar (@Model.Faltantes.Count):</span>
+                <a asp-controller="Tiendas" asp-action="Index"
+                   asp-route-ingredientes="@string.Join(",", Model.Faltantes.Select(f => f.IngredienteId))">Ver tiendas →</a>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                @foreach (var f in Model.Faltantes)
+                {
+                    @* "+": lo suma a la despensa con la cantidad que falta (como si ya lo hubiera comprado). *@
+                    <form asp-action="Agregar" method="post" class="form-despensa">
+                        <input type="hidden" name="texto" value="@f.Nombre" />
+                        <input type="hidden" name="cantidad" value="@f.Cantidad?.ToString(CultureInfo.InvariantCulture)" />
+                        <input type="hidden" name="unidad" value="@f.Unidad" />
+                        <span class="etiqueta-faltante">
+                            @f.Texto
+                            <button type="submit" aria-label="Agregar @f.Nombre a la despensa" title="Ya lo tengo: agregarlo a la despensa">
+                                <i class="bi bi-plus-circle-fill"></i>
+                            </button>
+                        </span>
+                    </form>
+                }
+            </div>
+        </div>
+    }
+</div>

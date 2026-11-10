@@ -770,11 +770,43 @@ h1, h2, h3, h4 {
 }
 
 .etiqueta-faltante {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
     padding: .15rem .5rem;
     border: 1px solid #FDE68A; /* amber-200 */
     border-radius: 6px;
     background: #fff;
     font-size: .875rem;
+}
+
+/* "+" para sumar el faltante a la despensa */
+.etiqueta-faltante button {
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--color-despensa);
+    line-height: 1;
+}
+
+.etiqueta-faltante button:hover {
+    color: var(--color-despensa-hover);
+}
+
+/* Tabla "Tengo en casa": nombre, cantidad + unidad editables y quitar */
+.tabla-despensa td,
+.tabla-despensa th {
+    padding-left: 0;
+    padding-right: .25rem;
+}
+
+.tabla-despensa .cantidad {
+    width: 4.5rem;
+}
+
+.tabla-despensa .unidad {
+    width: 4.25rem;
+    padding-right: 1.5rem;
 }
 
 /* ---------- 18. Tiendas ---------- */

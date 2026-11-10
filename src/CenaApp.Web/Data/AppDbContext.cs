@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<Restriccion> Restricciones => Set<Restriccion>();
     public DbSet<Alergeno> Alergenos => Set<Alergeno>();
     public DbSet<Gusto> Gustos => Set<Gusto>();
+    public DbSet<DespensaItem> Despensa => Set<DespensaItem>();
 
     // Los enum se guardan como texto ("Facil") en vez de número (0): la base se lee sin traducir.
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -69,6 +70,22 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<RecetaIngrediente>().Property(ri => ri.Cantidad).HasPrecision(8, 2);
 
+        // Usuario ↔ Ingrediente en la despensa (N:M con clase propia, guarda cantidad y unidad, D-19).
+        // Mismo esquema que RecetaIngrediente: la clave es el par y un ingrediente no se repite.
+        modelBuilder.Entity<DespensaItem>().ToTable("Despensa");
+        modelBuilder.Entity<DespensaItem>().HasKey(d => new { d.UsuarioId, d.IngredienteId });
+        modelBuilder.Entity<DespensaItem>()
+            .HasOne<Usuario>()
+            .WithMany(u => u.Despensa)
+            .HasForeignKey(d => d.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<DespensaItem>()
+            .HasOne(d => d.Ingrediente)
+            .WithMany()
+            .HasForeignKey(d => d.IngredienteId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<DespensaItem>().Property(d => d.Cantidad).HasPrecision(8, 2);
+
         // Relaciones N:M sin clase propia: EF Core crea la tabla intermedia.
         // Se indica el nombre de la tabla y de sus dos columnas para que se lean claras en la base.
         TablaIntermedia(modelBuilder.Entity<Usuario>().HasMany(u => u.Restricciones).WithMany(),
@@ -77,8 +94,6 @@ public class AppDbContext : DbContext
             "UsuarioAlergenos", typeof(Usuario), "UsuarioId", typeof(Alergeno), "AlergenoId");
         TablaIntermedia(modelBuilder.Entity<Usuario>().HasMany(u => u.Gustos).WithMany(),
             "UsuarioGustos", typeof(Usuario), "UsuarioId", typeof(Gusto), "GustoId");
-        TablaIntermedia(modelBuilder.Entity<Usuario>().HasMany(u => u.Despensa).WithMany(),
-            "Despensa", typeof(Usuario), "UsuarioId", typeof(Ingrediente), "IngredienteId");
         TablaIntermedia(modelBuilder.Entity<Usuario>().HasMany(u => u.Favoritos).WithMany(),
             "Favoritos", typeof(Usuario), "UsuarioId", typeof(Receta), "RecetaId");
         TablaIntermedia(modelBuilder.Entity<Ingrediente>().HasMany(i => i.Alergenos).WithMany(),
