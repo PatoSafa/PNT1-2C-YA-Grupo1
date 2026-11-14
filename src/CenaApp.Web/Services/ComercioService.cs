@@ -60,14 +60,20 @@ public class ComercioService : IComercioService
     private readonly HttpClient _http;
     private readonly IMemoryCache _cache;
     private readonly ILogger<ComercioService> _log;
-    private readonly string _urlOverpass;
+    // Servidores de Overpass, en el orden en que se prueban. El segundo es un espejo con los mismos datos: se usa
+    // si el principal no responde (por ejemplo en Windows 10, que no tiene el TLS 1.3 que pide el principal, E-05).
+    private readonly string[] _urlsOverpass;
 
     public ComercioService(HttpClient http, IMemoryCache cache, ILogger<ComercioService> log, IConfiguration config)
     {
         _http = http;
         _cache = cache;
         _log = log;
-        _urlOverpass = config["Overpass:Url"] ?? "https://overpass-api.de/api/interpreter";
+        // Overpass:Url (opcional) deja usar un único servidor propio en lugar de estos dos.
+        var urlConfigurada = config["Overpass:Url"];
+        _urlsOverpass = string.IsNullOrEmpty(urlConfigurada)
+            ? ["https://overpass-api.de/api/interpreter", "https://overpass.openstreetmap.fr/api/interpreter"]
+            : [urlConfigurada];
     }
 
     public (double Lat, double Lng, string Nombre) Centro => (-34.60995, -58.42914, "ORT Yatay"); // Yatay 240
@@ -99,7 +105,7 @@ public class ComercioService : IComercioService
         DondeSeCompra.GetValueOrDefault(grupo, DondeSeCompraLoDemas).Contains(tipoComercio);
 
     // Comercios de alimentos en el radio, desde OpenStreetMap. Se guardan 30 minutos en memoria por zona
-    // (~100 m) para no repetir la consulta. null si Overpass no respondió.
+    // (~100 m) para no repetir la consulta. null si ningún servidor de Overpass respondió.
     private async Task<List<Lugar>?> LugaresCercanosAsync(double lat, double lng)
     {
         var clave = $"osm:{lat:F3}:{lng:F3}";
@@ -114,24 +120,29 @@ public class ComercioService : IComercioService
             nwr["shop"~"^({string.Join('|', TiposOsm.Keys)})$"]["name"](around:{RadioMetros},{punto});
             out center tags 300;
             """;
-        try
+        foreach (var url in _urlsOverpass)
         {
-            using var respuesta = await _http.PostAsync(_urlOverpass, new FormUrlEncodedContent([new("data", consulta)]));
-            respuesta.EnsureSuccessStatusCode();
-            using var json = await JsonDocument.ParseAsync(await respuesta.Content.ReadAsStreamAsync());
+            try
+            {
+                using var respuesta = await _http.PostAsync(url, new FormUrlEncodedContent([new("data", consulta)]));
+                respuesta.EnsureSuccessStatusCode();
+                using var json = await JsonDocument.ParseAsync(await respuesta.Content.ReadAsStreamAsync());
 
-            var lugares = json.RootElement.GetProperty("elements").EnumerateArray()
-                .Select(ALugar)
-                .OfType<Lugar>()
-                .ToList();
-            _cache.Set(clave, lugares, TimeSpan.FromMinutes(30));
-            return lugares;
+                var lugares = json.RootElement.GetProperty("elements").EnumerateArray()
+                    .Select(ALugar)
+                    .OfType<Lugar>()
+                    .ToList();
+                _cache.Set(clave, lugares, TimeSpan.FromMinutes(30));
+                return lugares;
+            }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException)
+            {
+                // Solo el mensaje (sin la traza completa): que falle un servidor es esperable, y se prueba el siguiente.
+                _log.LogWarning("Overpass no respondió en {Url}: {Motivo}", url, error.InnerException?.Message ?? error.Message);
+            }
         }
-        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException)
-        {
-            _log.LogWarning(error, "Overpass no respondió; se usan los comercios de ejemplo.");
-            return null;
-        }
+        _log.LogWarning("Ningún servidor de Overpass respondió; se usan los comercios de ejemplo.");
+        return null;
     }
 
     // Un elemento de OpenStreetMap → Lugar. Los nodos traen lat/lon; los edificios (way), un "center".

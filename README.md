@@ -77,7 +77,7 @@ Al arrancar por primera vez, la app carga los datos iniciales: 32 recetas, 81 in
 | `admin@cenaapp.com` | `admin1234` | Administrador |
 | `demo@cenaapp.com` | `demo1234` | Usuario (vegetariana, alérgica a frutos secos, con despensa cargada) |
 
-> **Tiendas en Windows 10:** el servidor de Overpass pide TLS 1.3 y Windows 10 no lo tiene, así que en esa máquina se ven los comercios de ejemplo con un aviso (E-05 en `docs/ERRORES.md`). En Windows 11, Linux, Docker y Render se ven los comercios reales.
+> **Tiendas en Windows 10:** el servidor principal de Overpass pide TLS 1.3 y Windows 10 no lo tiene. La app prueba entonces con un segundo servidor (`overpass.openstreetmap.fr`), que tiene los mismos datos, así que los comercios reales se ven igual. Solo si no responde ninguno se muestran los comercios de ejemplo con un aviso (E-05 en `docs/ERRORES.md`).
 
 - Tests: `dotnet test`
 - Apagar la base: `docker compose down`. Los datos se conservan en el volumen `cenaapp-datos`; para borrarlos, `docker compose down -v`.
