@@ -13,7 +13,9 @@ A quien tiene restricciones alimentarias (vegetariana, vegana, sin gluten, sin l
 
 ## Integrantes
 
-`<<completar con los nombres del grupo>>`
+- Patricio Safa
+- Eric Balbachan
+- Maria Cecilia Ayala
 
 ## Qué se puede hacer
 
@@ -41,15 +43,15 @@ Todas las acciones de guardar, eliminar o cancelar piden confirmación, y los re
 | Mapa y comercios | Leaflet + OpenStreetMap; comercios con la Overpass API (gratis, sin clave) |
 | Íconos de ingredientes | Microsoft Fluent Emoji (licencia MIT), guardados en la base |
 | Tests | xUnit |
+| Contenedores | Docker: `compose.yaml` (PostgreSQL) y `Dockerfile` (la app) |
 | Versionado | Git y GitHub |
-
-Detalle y equivalencias con lo visto en clase (Spring Boot) en [`docs/TECNOLOGIAS.md`](docs/TECNOLOGIAS.md).
 
 ## Requisitos
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - Visual Studio Code con la extensión C# Dev Kit (opcional, para editar y usar `recetas.http`)
+- [Postman](https://www.postman.com/downloads/) (opcional, para probar la API)
 
 ## Cómo ejecutarlo
 
@@ -77,40 +79,35 @@ Al arrancar por primera vez, la app carga los datos iniciales: 32 recetas, 81 in
 | `admin@cenaapp.com` | `admin1234` | Administrador |
 | `demo@cenaapp.com` | `demo1234` | Usuario (vegetariana, alérgica a frutos secos, con despensa cargada) |
 
-> **Tiendas en Windows 10:** el servidor principal de Overpass pide TLS 1.3 y Windows 10 no lo tiene. La app prueba entonces con un segundo servidor (`overpass.openstreetmap.fr`), que tiene los mismos datos, así que los comercios reales se ven igual. Solo si no responde ninguno se muestran los comercios de ejemplo con un aviso (E-05 en `docs/ERRORES.md`).
+> **Tiendas en Windows 10:** el servidor principal de Overpass pide TLS 1.3 y Windows 10 no lo tiene. La app prueba entonces con un segundo servidor (`overpass.openstreetmap.fr`), que tiene los mismos datos, así que los comercios reales se ven igual. Solo si no responde ninguno se muestran los comercios de ejemplo con un aviso.
 
 - Tests: `dotnet test`
 - Apagar la base: `docker compose down`. Los datos se conservan en el volumen `cenaapp-datos`; para borrarlos, `docker compose down -v`.
 
-## Despliegue en Render (Docker)
+## Correr la app en un contenedor (Docker)
 
-Render no tiene runtime nativo de .NET, así que la app se despliega como contenedor con el [`Dockerfile`](Dockerfile) de la raíz.
+Además de la base, la app también puede correr en Docker con el [`Dockerfile`](Dockerfile) de la raíz. Sirve para probarla igual que en un servidor:
 
-1. **Base de datos:** en Render, *New → PostgreSQL* (plan Free). Ojo: la base gratuita vence a los 30 días, conviene crearla cerca de la entrega. De la sección *Connections* anotar Hostname (interno), Database, Username y Password.
-2. **Web Service:** *New → Web Service* → este repositorio → *Language: Docker* (usa el `Dockerfile` de la raíz) → plan Free.
-3. **Variables de entorno** del Web Service (nunca en el repositorio):
-
-   | Variable | Valor |
-   |---|---|
-   | `ConnectionStrings__CenaApp` | `Host=<hostname>;Port=5432;Database=<database>;Username=<username>;Password=<password>` |
-   | `DatosIniciales__ClaveAdmin` | contraseña que elija el equipo para `admin@cenaapp.com` |
-   | `DatosIniciales__ClaveDemo` | contraseña para `demo@cenaapp.com` |
-   | `DatosIniciales__ClaveSuperAdmin` | contraseña para `superadmin@cenaapp.com` |
-   | `Api__Clave` | clave larga y al azar para crear y eliminar por la API (`X-Api-Key`). Si falta, esos dos endpoints responden siempre 401 |
-
-   `PORT` la define Render: la app la lee al arrancar (`Program.cs`), igual que `server.port: ${PORT:8080}` en Spring.
-4. **Deploy.** En el primer arranque la app aplica las migraciones y carga los datos iniciales. En el log aparece una vez `fail: ... Failed executing DbCommand ... __EFMigrationsHistory`. Es normal: EF Core busca la tabla de historial antes de crearla.
-
-**Probar la imagen en local**, igual que en Render:
 ```bash
 docker build -t cenaapp .
-docker run --rm -p 10000:10000 -e PORT=10000   -e "ConnectionStrings__CenaApp=Host=host.docker.internal;Port=5432;Database=cenaapp;Username=cenaapp;Password=cenaapp_dev"   cenaapp
+docker run --rm -p 10000:10000 -e PORT=10000 -e Api__Clave=clave_local \
+  -e "ConnectionStrings__CenaApp=Host=host.docker.internal;Port=5432;Database=cenaapp;Username=cenaapp;Password=cenaapp_dev" \
+  cenaapp
 # http://localhost:10000
 ```
 
+La imagen corre en modo Producción, así que todo lo que cambia entre ambientes llega por variables de entorno (nunca desde el repositorio):
+
+| Variable | Qué es |
+|---|---|
+| `ConnectionStrings__CenaApp` | Cadena de conexión a PostgreSQL |
+| `PORT` | Puerto en el que escucha la app. `Program.cs` lo lee al arrancar, igual que `server.port: ${PORT:8080}` en Spring |
+| `Api__Clave` | Clave para crear y eliminar por la API (`X-Api-Key`). Si falta, esos dos endpoints responden siempre 401 |
+| `DatosIniciales__ClaveSuperAdmin`, `DatosIniciales__ClaveAdmin`, `DatosIniciales__ClaveDemo` | Contraseñas de los tres usuarios iniciales. Si faltan, esos usuarios no se crean |
+
 ## API REST
 
-Base: `http://localhost:5224/api/recetas`. Todas las pruebas están listas para ejecutar en [`src/CenaApp.Web/recetas.http`](src/CenaApp.Web/recetas.http).
+Base: `http://localhost:5224/api/recetas`. Todas las pruebas están listas para ejecutar en [`src/CenaApp.Web/recetas.http`](src/CenaApp.Web/recetas.http) (VS Code), y más abajo se explica cómo hacerlas con Postman.
 
 | Método | Ruta | Qué hace | Respuestas |
 |---|---|---|---|
@@ -120,7 +117,7 @@ Base: `http://localhost:5224/api/recetas`. Todas las pruebas están listas para 
 | `POST` | `/api/recetas` | Crea una receta (pide clave) | `201` · `400` con los errores de validación · `401` sin la clave |
 | `DELETE` | `/api/recetas/{id}` | Elimina una receta (pide clave) | `204` · `404` si no existe · `401` sin la clave |
 
-Los `GET` son públicos. `POST` y `DELETE` piden el encabezado `X-Api-Key` con la clave de la API (D-27). En local es `clave_dev` (`appsettings.Development.json`); en producción, la de la variable de entorno `Api__Clave`. Sin la clave, o con una incorrecta, responden `401 Unauthorized`:
+Los `GET` son públicos. `POST` y `DELETE` piden el encabezado `X-Api-Key` con la clave de la API. En local es `clave_dev` (`appsettings.Development.json`); en producción, la de la variable de entorno `Api__Clave`. Sin la clave, o con una incorrecta, responden `401 Unauthorized`:
 ```json
 { "mensaje": "Falta el encabezado X-Api-Key o la clave no es correcta." }
 ```
@@ -186,9 +183,38 @@ Si el `POST` llega con el nombre vacío y el tiempo en 0, responde `400 Bad Requ
 }
 ```
 
+### Probar la API con Postman
+
+Con la app corriendo, cada consulta se arma así en Postman:
+
+| # | Método y URL | Encabezados | Respuesta esperada |
+|---|---|---|---|
+| 1 | `GET http://localhost:5224/api/recetas` | — | `200` con la lista |
+| 2 | `GET http://localhost:5224/api/recetas?nombre=papa` | — | `200` con las que contienen "papa" |
+| 3 | `GET http://localhost:5224/api/recetas/1` | — | `200` con ingredientes, pasos y alérgenos |
+| 4 | `GET http://localhost:5224/api/recetas/9999` | — | `404` con mensaje |
+| 5 | `POST http://localhost:5224/api/recetas` | `X-Api-Key: clave_dev` | `201` con la receta creada |
+| 6 | `POST` con el nombre vacío y el tiempo en 0 | `X-Api-Key: clave_dev` | `400` con un error por campo |
+| 7 | `POST` con un nombre que ya existe ("Risotto de hongos") | `X-Api-Key: clave_dev` | `400` |
+| 8 | `DELETE http://localhost:5224/api/recetas/{id}` (el id que devolvió la 5) | `X-Api-Key: clave_dev` | `204` |
+| 9 | `DELETE http://localhost:5224/api/recetas/9999` | `X-Api-Key: clave_dev` | `404` |
+| 10 | `POST` o `DELETE` sin el encabezado, o con otra clave | — | `401` |
+
+Para las de `POST`:
+
+- Pestaña *Headers*: agregar `X-Api-Key` con el valor `clave_dev`.
+- Pestaña *Body* → *raw* → *JSON*: pegar el JSON del ejemplo "crear una receta" de arriba.
+
+Lo mismo desde la terminal, con `curl`:
+
+```bash
+curl http://localhost:5224/api/recetas/1
+curl -X DELETE http://localhost:5224/api/recetas/33 -H "X-Api-Key: clave_dev"
+```
+
 ## Seguridad
 
-Resumen de lo que protege a la app (detalle en D-27 y D-28 de [`docs/DECISIONES.md`](docs/DECISIONES.md)):
+Resumen de lo que protege a la app:
 
 - Contraseñas con hash (PBKDF2), sesión por cookie `HttpOnly` y token antiforgery en todos los formularios.
 - Roles con `[Authorize]`; la sesión se corta si la cuenta se desactiva o cambia de rol.
@@ -196,13 +222,16 @@ Resumen de lo que protege a la app (detalle en D-27 y D-28 de [`docs/DECISIONES.
 - Límite de intentos por IP: 10 por minuto para ingresar o registrarse y 60 por minuto en la API (`429` al pasarse).
 - Encabezados de seguridad, con una Content-Security-Policy que no permite scripts en línea ni de sitios no listados.
 - Imágenes subidas: hasta 300 KB y verificadas por contenido, no por extensión.
+- Ninguna contraseña real en el repositorio: en producción llegan por variables de entorno. `appsettings.Development.json` tiene solo valores de desarrollo.
+- El contenedor corre sin privilegios de administrador.
 
 ## Estructura del repositorio
 
 ```
 CenaApp.sln                 solución (equivale a build.gradle / settings.gradle)
 compose.yaml                PostgreSQL para desarrollo
-Dockerfile                  imagen para Render
+Dockerfile                  imagen de la app
+docs/funcional/             documentación funcional (un solo documento con todo)
 src/CenaApp.Web/
   Controllers/              reciben la petición y eligen la vista (Api/ = controllers JSON)
   Services/                 reglas de negocio (aptitud de recetas, despensa, cuentas...)
@@ -211,24 +240,13 @@ src/CenaApp.Web/
   Data/                     AppDbContext, datos iniciales, Imagenes/ (íconos) y Migrations/
   Views/                    vistas Razor, una carpeta por controller
   wwwroot/                  estilos.css y los JS (favoritos, despensa, tiendas...)
-  recetas.http              pruebas de la API
+  Program.cs                configuración: servicios, base de datos, seguridad y rutas
+  recetas.http              pruebas de la API para VS Code
 tests/CenaApp.Tests/        tests xUnit: aptitud y nivel, despensa, sugerencias y tiendas (43)
-docs/                       consigna, decisiones, errores, arquitectura, diseño
 ```
+
+Recorrido de una petición: Vista Razor → Controller → Service (reglas) → `AppDbContext` (EF Core) → PostgreSQL.
 
 ## Documentación
 
-| Archivo | Contenido |
-|---|---|
-| [`docs/CONSIGNA.md`](docs/CONSIGNA.md) | Requisitos del enunciado como checklist |
-| [`docs/DECISIONES.md`](docs/DECISIONES.md) | Decisiones técnicas con alternativas y motivo (Evidencia 2) |
-| [`docs/DISENO_ENTIDADES.md`](docs/DISENO_ENTIDADES.md) | Diseño de las entidades antes de programar (Evidencia 1) |
-| [`docs/ERRORES.md`](docs/ERRORES.md) | Errores reales del desarrollo y cómo se resolvieron (Evidencia 3) |
-| [`docs/EVIDENCIAS.md`](docs/EVIDENCIAS.md) | Índice de las 6 evidencias de la Parte 18 |
-| [`docs/DEFENSA.md`](docs/DEFENSA.md) | Guía para la defensa oral y la prueba sorpresa |
-| [`docs/REFLEXION.md`](docs/REFLEXION.md) | Reflexión final (Parte 20) |
-| [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Capas, carpetas y modelo de datos |
-| [`docs/PLAN.md`](docs/PLAN.md) | Tareas y avance |
-| [`docs/TECNOLOGIAS.md`](docs/TECNOLOGIAS.md) | Stack y equivalencias con Spring Boot |
-| [`docs/DISENO.md`](docs/DISENO.md) | Pantallas, colores y componentes (del prototipo de Figma) |
-| [`docs/funcional/`](docs/funcional/) | Documentación funcional y guías de recetas y restricciones del equipo |
+Toda la documentación está en un solo archivo: [`docs/funcional/CenaAPP_Documentacion_Funcional.docx`](docs/funcional/CenaAPP_Documentacion_Funcional.docx) (Documentación Funcional de CenaAPP, versión 4). Las secciones 1 a 10 son el diseño funcional: alcance, actores, casos de uso, pantallas, validaciones, requisitos y modelo de datos. La sección 11 describe el sistema construido: qué cambió respecto del diseño, tecnología y arquitectura, API, seguridad, decisiones, errores encontrados y cómo ejecutarlo.

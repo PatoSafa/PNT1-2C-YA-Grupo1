@@ -1,5 +1,5 @@
 /* Estilos propios de CenaAPP: colores de Figma como variables (pisan a Bootstrap) y los componentes
-   que se repiten en las pantallas (ver docs/DISENO.md §5). Para cambiar un color, tocá solo :root. */
+   que se repiten en las pantallas (tomados del prototipo de Figma). Para cambiar un color, tocá solo :root. */
 
 /* ---------- 1. Paleta (DISENO.md §2) ---------- */
 :root {

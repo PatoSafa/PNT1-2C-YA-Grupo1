@@ -125,8 +125,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 // La cadena de conexión sale de appsettings.Development.json en local
 // y de la variable de entorno ConnectionStrings__CenaApp en producción.
-var cadenaConexion = builder.Configuration.GetConnectionString("CenaApp")
-    ?? throw new InvalidOperationException("Falta la cadena de conexión 'CenaApp'.");
+var cadenaConexion = builder.Configuration.GetConnectionString("CenaApp");
+if (string.IsNullOrEmpty(cadenaConexion))
+{
+    throw new InvalidOperationException("Falta la cadena de conexión 'CenaApp'.");
+}
 builder.Services.AddDbContext<AppDbContext>(opciones => opciones.UseNpgsql(cadenaConexion));
 
 var app = builder.Build();

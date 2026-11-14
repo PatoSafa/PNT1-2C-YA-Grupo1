@@ -1,5 +1,5 @@
 // Carga los datos iniciales (catálogos, ingredientes, recetas y usuarios de prueba) si la base está vacía.
-// Recetas tomadas de docs/funcional/guia_100_recetas_restricciones.pdf (cantidades por porción).
+// Recetas tomadas de la guía de 100 recetas con restricciones que armó el equipo (cantidades por porción).
 // Tiempos, dificultad, calorías y pasos son un BORRADOR para que el equipo revise (D-04).
 using CenaApp.Web.Models;
 using Microsoft.AspNetCore.Identity;

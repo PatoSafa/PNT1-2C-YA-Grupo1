@@ -11,7 +11,7 @@ namespace CenaApp.Web.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Corregido a mano: EF Core propone false (el valor por defecto de bool) y eso dejaría
-            // desactivados a todos los usuarios que ya existen. Ver E-07 en docs/ERRORES.md.
+            // desactivados a todos los usuarios que ya existen (error E-07 del registro de errores del equipo).
             migrationBuilder.AddColumn<bool>(
                 name: "Activo",
                 table: "Usuarios",
