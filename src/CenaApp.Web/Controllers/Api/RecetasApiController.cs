@@ -4,6 +4,7 @@ using CenaApp.Web.Models;
 using CenaApp.Web.Services;
 using CenaApp.Web.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CenaApp.Web.Controllers.Api;
 
@@ -11,6 +12,8 @@ namespace CenaApp.Web.Controllers.Api;
 // con la lista de errores sin llegar a ejecutar la acción.
 [ApiController]
 [Route("api/recetas")]
+// Hasta 60 pedidos por minuto por IP (política "api" de Program.cs, D-28).
+[EnableRateLimiting("api")]
 public class RecetasApiController : ControllerBase
 {
     private readonly IRecetaService _recetas;
@@ -42,7 +45,9 @@ public class RecetasApiController : ControllerBase
     }
 
     // POST /api/recetas → 201 con la receta creada y su URL, o 400 con los errores de validación.
+    // Pide la clave de la API (401 sin ella, D-27).
     [HttpPost]
+    [RequiereClaveApi]
     public async Task<ActionResult<RecetaDetalleDto>> Crear(RecetaCrearDto datos)
     {
         var errores = await _recetas.ValidarAsync(datos);
@@ -61,7 +66,9 @@ public class RecetasApiController : ControllerBase
     }
 
     // DELETE /api/recetas/5 → 204 si se borró, 404 si no existía (Parte 11).
+    // Pide la clave de la API (401 sin ella, D-27).
     [HttpDelete("{id:int}")]
+    [RequiereClaveApi]
     public async Task<IActionResult> Eliminar(int id)
     {
         var borrada = await _recetas.EliminarAsync(id);

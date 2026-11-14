@@ -23,4 +23,8 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 # Puerto por defecto; Render lo cambia con la variable PORT (ver Program.cs).
 EXPOSE 8080
 
+# La app corre con el usuario sin privilegios que trae la imagen de .NET, no como root (D-28):
+# si alguien lograra ejecutar algo dentro del contenedor, no tendría permisos de administrador.
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "CenaApp.Web.dll"]

@@ -96,6 +96,7 @@ Render no tiene runtime nativo de .NET, así que la app se despliega como conten
    | `DatosIniciales__ClaveAdmin` | contraseña que elija el equipo para `admin@cenaapp.com` |
    | `DatosIniciales__ClaveDemo` | contraseña para `demo@cenaapp.com` |
    | `DatosIniciales__ClaveSuperAdmin` | contraseña para `superadmin@cenaapp.com` |
+   | `Api__Clave` | clave larga y al azar para crear y eliminar por la API (`X-Api-Key`). Si falta, esos dos endpoints responden siempre 401 |
 
    `PORT` la define Render: la app la lee al arrancar (`Program.cs`), igual que `server.port: ${PORT:8080}` en Spring.
 4. **Deploy.** En el primer arranque la app aplica las migraciones y carga los datos iniciales. En el log aparece una vez `fail: ... Failed executing DbCommand ... __EFMigrationsHistory`. Es normal: EF Core busca la tabla de historial antes de crearla.
@@ -116,14 +117,20 @@ Base: `http://localhost:5224/api/recetas`. Todas las pruebas están listas para 
 | `GET` | `/api/recetas` | Lista todas las recetas | `200` |
 | `GET` | `/api/recetas?nombre=papa` | Lista las que contienen ese texto en el nombre | `200` |
 | `GET` | `/api/recetas/{id}` | Una receta con ingredientes, pasos y alérgenos calculados | `200` · `404` si no existe |
-| `POST` | `/api/recetas` | Crea una receta | `201` · `400` con los errores de validación |
-| `DELETE` | `/api/recetas/{id}` | Elimina una receta | `204` · `404` si no existe |
+| `POST` | `/api/recetas` | Crea una receta (pide clave) | `201` · `400` con los errores de validación · `401` sin la clave |
+| `DELETE` | `/api/recetas/{id}` | Elimina una receta (pide clave) | `204` · `404` si no existe · `401` sin la clave |
+
+Los `GET` son públicos. `POST` y `DELETE` piden el encabezado `X-Api-Key` con la clave de la API (D-27). En local es `clave_dev` (`appsettings.Development.json`); en producción, la de la variable de entorno `Api__Clave`. Sin la clave, o con una incorrecta, responden `401 Unauthorized`:
+```json
+{ "mensaje": "Falta el encabezado X-Api-Key o la clave no es correcta." }
+```
 
 ### Ejemplo: crear una receta
 
 ```http
 POST /api/recetas
 Content-Type: application/json
+X-Api-Key: clave_dev
 ```
 ```json
 {
@@ -178,6 +185,17 @@ Si el `POST` llega con el nombre vacío y el tiempo en 0, responde `400 Bad Requ
   }
 }
 ```
+
+## Seguridad
+
+Resumen de lo que protege a la app (detalle en D-27 y D-28 de [`docs/DECISIONES.md`](docs/DECISIONES.md)):
+
+- Contraseñas con hash (PBKDF2), sesión por cookie `HttpOnly` y token antiforgery en todos los formularios.
+- Roles con `[Authorize]`; la sesión se corta si la cuenta se desactiva o cambia de rol.
+- `POST` y `DELETE` de la API piden clave (`X-Api-Key`).
+- Límite de intentos por IP: 10 por minuto para ingresar o registrarse y 60 por minuto en la API (`429` al pasarse).
+- Encabezados de seguridad, con una Content-Security-Policy que no permite scripts en línea ni de sitios no listados.
+- Imágenes subidas: hasta 300 KB y verificadas por contenido, no por extensión.
 
 ## Estructura del repositorio
 

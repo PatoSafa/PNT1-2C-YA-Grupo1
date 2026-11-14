@@ -16,7 +16,7 @@
                 <i class="bi bi-search"></i>
                 <input type="search" name="buscar" value="@ViewData["Buscar"]" class="form-control borde" placeholder="Email o nombre..." aria-label="Buscar usuarios" />
             </div>
-            <select name="rol" class="form-select w-auto" aria-label="Filtrar por rol" onchange="this.form.requestSubmit()">
+            <select name="rol" class="form-select w-auto" aria-label="Filtrar por rol" data-enviar-al-cambiar>
                 <option value="">Todos los roles</option>
                 @foreach (var rol in Enum.GetValues<Rol>())
                 {

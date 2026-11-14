@@ -9,7 +9,8 @@ services:
       POSTGRES_USER: cenaapp
       POSTGRES_PASSWORD: cenaapp_dev
     ports:
-      - "5432:5432"
+      # 127.0.0.1: la base se alcanza solo desde esta máquina, no desde otras de la misma red (D-28).
+      - "127.0.0.1:5432:5432"
     volumes:
       - cenaapp-datos:/var/lib/postgresql/data
     healthcheck:

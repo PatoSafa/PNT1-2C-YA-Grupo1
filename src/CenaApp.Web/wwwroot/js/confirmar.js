@@ -64,3 +64,11 @@ document.addEventListener("click", async (evento) => {
         window.location.href = link.href;
     }
 });
+
+// Los <select> con data-enviar-al-cambiar envían su formulario apenas se elige otra opción (filtros de los listados).
+// Va acá y no como onchange="..." en el HTML porque la Content-Security-Policy no deja correr scripts en línea (D-28).
+document.addEventListener("change", (evento) => {
+    if (evento.target.matches("[data-enviar-al-cambiar]")) {
+        evento.target.form.requestSubmit();
+    }
+});

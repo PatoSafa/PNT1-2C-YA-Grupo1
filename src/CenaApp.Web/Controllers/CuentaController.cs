@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CenaApp.Web.Controllers;
 
@@ -25,8 +26,10 @@ public class CuentaController : Controller
         return View(new RegistroViewModel());
     }
 
+    // Hasta 10 intentos por minuto por IP (política "cuenta" de Program.cs, D-28).
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("cuenta")]
     public async Task<IActionResult> Registrarse(RegistroViewModel modelo)
     {
         if (!ModelState.IsValid)
@@ -52,8 +55,10 @@ public class CuentaController : Controller
         return View(new IngresoViewModel { ReturnUrl = returnUrl });
     }
 
+    // Hasta 10 intentos por minuto por IP (política "cuenta" de Program.cs, D-28).
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("cuenta")]
     public async Task<IActionResult> Ingresar(IngresoViewModel modelo)
     {
         if (!ModelState.IsValid)

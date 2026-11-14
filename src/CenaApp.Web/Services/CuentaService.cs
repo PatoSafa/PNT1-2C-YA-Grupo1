@@ -14,6 +14,9 @@ public class CuentaService : ICuentaService
     // y sabe verificar una contraseña contra ese hash.
     private readonly PasswordHasher<Usuario> _hasher = new();
 
+    // Hash de una contraseña cualquiera, para comparar cuando el email no existe (ver ValidarCredencialesAsync).
+    private static readonly string HashDeRelleno = new PasswordHasher<Usuario>().HashPassword(new Usuario(), "relleno");
+
     public CuentaService(AppDbContext db)
     {
         _db = db;
@@ -42,6 +45,9 @@ public class CuentaService : ICuentaService
         var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == emailNormalizado);
         if (usuario is null)
         {
+            // Se verifica igual contra un hash de relleno: así la respuesta tarda lo mismo exista o no el email,
+            // y no se puede averiguar qué cuentas existen midiendo el tiempo (RNF16, D-28).
+            _hasher.VerifyHashedPassword(new Usuario(), HashDeRelleno, password);
             return null;
         }
 

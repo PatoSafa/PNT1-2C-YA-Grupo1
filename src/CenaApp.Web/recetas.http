@@ -3,6 +3,8 @@
 # (con la app corriendo: dotnet run --project src/CenaApp.Web).
 
 @base = http://localhost:5224/api/recetas
+# Clave para crear y eliminar (D-27). En local es la de appsettings.Development.json.
+@clave = clave_dev
 
 ### 1. Listar todas las recetas
 GET {{base}}
@@ -20,6 +22,7 @@ GET {{base}}/9999
 # CategoriaId 2 = Ensalada; IngredienteId: ver los Id con la petición 3 o en la base.
 POST {{base}}
 Content-Type: application/json
+X-Api-Key: {{clave}}
 
 {
   "nombre": "Ensalada de prueba",
@@ -43,6 +46,7 @@ Content-Type: application/json
 ### 6. Crear con datos inválidos → 400 con los errores (Parte 12: validaciones VAL-15 y VAL-16)
 POST {{base}}
 Content-Type: application/json
+X-Api-Key: {{clave}}
 
 {
   "nombre": "",
@@ -58,6 +62,7 @@ Content-Type: application/json
 ### 7. Crear con nombre repetido → 400 "Ya existe una receta con ese nombre."
 POST {{base}}
 Content-Type: application/json
+X-Api-Key: {{clave}}
 
 {
   "nombre": "Risotto de hongos",
@@ -72,6 +77,18 @@ Content-Type: application/json
 
 ### 8. Eliminar (cambiar el id por el que devolvió la petición 5) → 204
 DELETE {{base}}/33
+X-Api-Key: {{clave}}
 
 ### 9. Eliminar un id inexistente → 404
 DELETE {{base}}/9999
+X-Api-Key: {{clave}}
+
+### 10. Crear sin la clave → 401 con mensaje (D-27)
+POST {{base}}
+Content-Type: application/json
+
+{ "nombre": "No se crea" }
+
+### 11. Eliminar con una clave incorrecta → 401
+DELETE {{base}}/1
+X-Api-Key: cualquiera

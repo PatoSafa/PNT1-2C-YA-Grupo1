@@ -4,11 +4,13 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
+using System.Threading.RateLimiting;
 using CenaApp.Web.Data;
 using CenaApp.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.WebEncoders;
 using Microsoft.EntityFrameworkCore;
 
@@ -62,6 +64,30 @@ builder.Services.AddHttpClient<IComercioService, ComercioService>(cliente =>
     cliente.DefaultRequestHeaders.UserAgent.ParseAdd("CenaAPP/1.0 (TP ORT PNT1)");
 });
 
+// Límite de pedidos por dirección IP (D-28), con lo que ya trae ASP.NET Core. Frena a quien prueba contraseñas
+// una tras otra o le pega a la API sin parar: pasado el límite, responde 429 hasta que termine el minuto.
+// Cada política se aplica con [EnableRateLimiting("nombre")] arriba de la acción o del controller.
+Func<HttpContext, string> ipDe = http => http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+builder.Services.AddRateLimiter(opciones =>
+{
+    opciones.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    opciones.OnRejected = async (contexto, cancelacion) =>
+    {
+        contexto.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+        await contexto.HttpContext.Response.WriteAsync("Demasiados intentos. Esperá un minuto y probá de nuevo.", cancelacion);
+    };
+    // Ingresar y registrarse: 10 intentos por minuto.
+    opciones.AddPolicy("cuenta", http => RateLimitPartition.GetFixedWindowLimiter(ipDe(http),
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    // API: 60 pedidos por minuto.
+    opciones.AddPolicy("api", http => RateLimitPartition.GetFixedWindowLimiter(ipDe(http),
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
+});
+
+// Fuera de desarrollo, las cookies (sesión y antiforgery) viajan solo por HTTPS. En local se usa http://localhost.
+var cookieSegura = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+builder.Services.AddAntiforgery(opciones => opciones.Cookie.SecurePolicy = cookieSegura);
+
 // Login por cookie (sin ASP.NET Core Identity completo: son pocas clases propias, fáciles de explicar). Si alguien sin sesión entra a una
 // página con [Authorize], lo manda a /Cuenta/Ingresar; si no tiene el rol, a /Cuenta/AccesoDenegado.
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -72,15 +98,24 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         // La sesión vence tras 60 minutos sin uso; cada visita la renueva (RNF15).
         opciones.ExpireTimeSpan = TimeSpan.FromMinutes(60);
         opciones.SlidingExpiration = true;
+        // La cookie no se puede leer desde JavaScript, no viaja en pedidos que arma otro sitio y, fuera de
+        // desarrollo, solo va por HTTPS (D-28).
+        opciones.Cookie.Name = "CenaApp.Sesion";
+        opciones.Cookie.HttpOnly = true;
+        opciones.Cookie.SameSite = SameSiteMode.Lax;
+        opciones.Cookie.SecurePolicy = cookieSegura;
 
         // En cada pedido se revisa que el usuario siga existiendo, activo y con el mismo rol (D-22). Así, si el
         // SuperAdmin lo desactiva o le cambia el rol, la sesión abierta se cierra y no sigue viendo lo de antes.
         opciones.Events.OnValidatePrincipal = async contexto =>
         {
             var db = contexto.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-            var id = int.Parse(contexto.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var usuario = await db.Usuarios.Where(u => u.Id == id).Select(u => new { u.Activo, u.Rol }).FirstOrDefaultAsync();
-            if (usuario is null || !usuario.Activo || !contexto.Principal.IsInRole(usuario.Rol.ToString()))
+            // Si la cookie no trae un id válido, se rechaza igual que la de un usuario que ya no existe.
+            var idValido = int.TryParse(contexto.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id);
+            var usuario = idValido
+                ? await db.Usuarios.Where(u => u.Id == id).Select(u => new { u.Activo, u.Rol }).FirstOrDefaultAsync()
+                : null;
+            if (usuario is null || !usuario.Activo || !contexto.Principal!.IsInRole(usuario.Rol.ToString()))
             {
                 contexto.RejectPrincipal();
                 await contexto.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -106,6 +141,36 @@ using (var scope = app.Services.CreateScope())
 
 app.UseForwardedHeaders();
 
+// Encabezados de seguridad en todas las respuestas (D-28). Le indican al navegador qué puede hacer la página:
+// - Content-Security-Policy: de dónde puede cargar scripts, estilos, fuentes e imágenes. Solo de la propia app y
+//   de los tres orígenes que usa (Bootstrap Icons en jsDelivr, Leaflet en unpkg y el mapa de OpenStreetMap).
+//   Sin scripts en línea: si alguien lograra meter un <script> en una página, el navegador no lo ejecuta.
+//   Al agregar un <script src> o un <link> de otro sitio, hay que sumarlo acá o el navegador lo bloquea.
+// - X-Frame-Options / frame-ancestors: la app no se puede mostrar dentro de un <iframe> de otro sitio.
+// - X-Content-Type-Options: el navegador respeta el tipo de archivo que declara el servidor.
+// En desarrollo se permite además el WebSocket que usa "dotnet watch" para recargar la página.
+var politicaDeContenido = string.Join("; ",
+    "default-src 'self'",
+    "script-src 'self' https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
+    "font-src 'self' https://cdn.jsdelivr.net",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://unpkg.com",
+    "connect-src 'self'" + (app.Environment.IsDevelopment() ? " ws: wss:" : ""),
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'");
+app.Use(async (contexto, siguiente) =>
+{
+    var encabezados = contexto.Response.Headers;
+    encabezados["Content-Security-Policy"] = politicaDeContenido;
+    encabezados["X-Content-Type-Options"] = "nosniff";
+    encabezados["X-Frame-Options"] = "DENY";
+    encabezados["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    encabezados["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()";
+    await siguiente();
+});
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -118,6 +183,9 @@ app.UseRouting();
 // Primero se lee la cookie (quién es), después se controlan los permisos (qué puede hacer).
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Aplica los límites de pedidos definidos arriba (va después de UseRouting: necesita saber qué acción se pidió).
+app.UseRateLimiter();
 
 app.MapStaticAssets();
 
