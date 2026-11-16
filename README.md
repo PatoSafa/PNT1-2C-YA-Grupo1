@@ -105,6 +105,16 @@ La imagen corre en modo Producción, así que todo lo que cambia entre ambientes
 | `Api__Clave` | Clave para crear y eliminar por la API (`X-Api-Key`). Si falta, esos dos endpoints responden siempre 401 |
 | `DatosIniciales__ClaveSuperAdmin`, `DatosIniciales__ClaveAdmin`, `DatosIniciales__ClaveDemo` | Contraseñas de los tres usuarios iniciales. Si faltan, esos usuarios no se crean |
 
+## Desplegar en Render
+
+El archivo [`render.yaml`](render.yaml) crea todo junto: la app (con el `Dockerfile`) y una base PostgreSQL, las dos en el plan gratis.
+
+1. En [Render](https://dashboard.render.com), **New > Blueprint** y elegir este repositorio.
+2. Completar las tres contraseñas que pide (`DatosIniciales__Clave...`): son las de los usuarios `superadmin@cenaapp.com`, `admin@cenaapp.com` y `demo@cenaapp.com`.
+3. **Apply**. A los pocos minutos la app queda en `https://cenaapp.onrender.com` (o la dirección que muestre Render).
+
+La cadena de conexión y la clave de la API las completa Render. En el plan gratis la app se duerme tras 15 minutos sin uso (la primera visita tarda cerca de un minuto) y la base se borra a los 30 días.
+
 ## API REST
 
 Base: `http://localhost:5224/api/recetas`. Todas las pruebas están listas para ejecutar en [`src/CenaApp.Web/recetas.http`](src/CenaApp.Web/recetas.http) (VS Code), y más abajo se explica cómo hacerlas con Postman.
@@ -231,6 +241,7 @@ Resumen de lo que protege a la app:
 CenaApp.sln                 solución (equivale a build.gradle / settings.gradle)
 compose.yaml                PostgreSQL para desarrollo
 Dockerfile                  imagen de la app
+render.yaml                 despliegue en Render (app + base)
 docs/funcional/             documentación funcional (un solo documento con todo)
 src/CenaApp.Web/
   Controllers/              reciben la petición y eligen la vista (Api/ = controllers JSON)

@@ -130,6 +130,21 @@ if (string.IsNullOrEmpty(cadenaConexion))
 {
     throw new InvalidOperationException("Falta la cadena de conexión 'CenaApp'.");
 }
+// Render entrega la cadena como una URL (postgresql://usuario:clave@servidor/base). Npgsql espera el formato
+// "Host=...;Database=...", así que se convierte.
+if (cadenaConexion.StartsWith("postgres://") || cadenaConexion.StartsWith("postgresql://"))
+{
+    var url = new Uri(cadenaConexion);
+    var usuarioYClave = url.UserInfo.Split(':', 2);
+    cadenaConexion = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = url.Host,
+        Port = url.Port > 0 ? url.Port : 5432,
+        Database = url.AbsolutePath.TrimStart('/'),
+        Username = Uri.UnescapeDataString(usuarioYClave[0]),
+        Password = usuarioYClave.Length > 1 ? Uri.UnescapeDataString(usuarioYClave[1]) : null,
+    }.ConnectionString;
+}
 builder.Services.AddDbContext<AppDbContext>(opciones => opciones.UseNpgsql(cadenaConexion));
 
 var app = builder.Build();

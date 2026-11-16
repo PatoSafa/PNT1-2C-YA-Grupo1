@@ -1,0 +1,31 @@
+# Despliegue en Render (Blueprint): la app (con el Dockerfile de la raíz) y una base PostgreSQL, las dos en el plan gratis.
+# Uso: en Render, New > Blueprint, elegir este repositorio y completar las tres contraseñas que pide.
+databases:
+  - name: cenaapp-db
+    plan: free
+    region: virginia
+    databaseName: cenaapp
+    user: cenaapp
+
+services:
+  - type: web
+    name: cenaapp
+    runtime: docker
+    plan: free
+    region: virginia
+    envVars:
+      # Cadena de conexión a la base de arriba (Render la completa sola).
+      - key: ConnectionStrings__CenaApp
+        fromDatabase:
+          name: cenaapp-db
+          property: connectionString
+      # Clave de la API (X-Api-Key): Render genera una al azar. Se ve en la pestaña Environment del servicio.
+      - key: Api__Clave
+        generateValue: true
+      # Contraseñas de los tres usuarios iniciales: Render las pide al crear el Blueprint (no van en el repositorio).
+      - key: DatosIniciales__ClaveSuperAdmin
+        sync: false
+      - key: DatosIniciales__ClaveAdmin
+        sync: false
+      - key: DatosIniciales__ClaveDemo
+        sync: false
